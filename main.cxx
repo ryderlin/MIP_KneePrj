@@ -18,6 +18,7 @@ extern int qInitResources_icons();
 
 int main( int argc, char** argv )
 {
+ //git test
 
   // QT Stuff
   QApplication app( argc, argv );
