@@ -41,6 +41,8 @@
 #include <vtkInteractorStyleImage.h>
 
 #include "vtkSmartPointer.h"
+#include "C_itkSeg.h"
+#include "C_fileIO.h"
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
@@ -65,8 +67,21 @@ SimpleView::~SimpleView()
 // Action to be taken upon file open
 void SimpleView::slotOpenFile()
 {
+    C_fileIO myImage2D;
+
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath());
 
+    myImage2D.readFiletoImages("/media/sf_shared_host/1.bmp");
+    C_fileIO kmeanImage;
+    C_fileIO mrfImage;
+    C_itkSeg mySeg;
+    mySeg.setParameter(8);
+
+    kmeanImage.readFromOtherImage(mySeg.kmeanMethod2D( myImage2D.castsignedShort2D())) ;
+    mrfImage.readFromOtherImage(  mySeg.markovMethod2D( myImage2D.castsignedShort2D(), kmeanImage.originalImages()  )  );
+    this->ui->qvtkWidget->GetRenderWindow()->AddRenderer(mrfImage.vtkRender());
+    this->ui->qvtkWidget->repaint();
+    return;
     /***** 變數設定 *****/
     // image is grayscale
 //    typedef itk::Image<unsigned short,2> ImageType; //要用unsigned short以上型態，dicom pixel value才不會爆掉
@@ -87,6 +102,9 @@ void SimpleView::slotOpenFile()
     reader->SetFileName(fileName.toLatin1().data());
     //reader->SetFileName("/Users/Chris/Downloads/ntu.jpg");
     reader->Update();
+//    C_itkSeg mySeg;
+//    mySeg.setParameter(5);
+//    mySeg.kmeanMethod2D(reader->GetOutput());
 
     /***** DICOM pixel value *****/
     /*

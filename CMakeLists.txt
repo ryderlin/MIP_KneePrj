@@ -41,9 +41,9 @@ include_directories(
 )
 
 # Set your files and resources here
-set( Srcs main.cxx SimpleView.cxx C_itkSeg.cxx C_tool.cxx)
+set( Srcs main.cxx SimpleView.cxx C_itkSeg.cxx C_tool.cxx C_fileIO.cxx)
 
-set( Hdrs SimpleView.h C_itkSeg.h C_tool.h itkImageToVTKImageFilter.h)
+set( Hdrs SimpleView.h C_itkSeg.h C_tool.h itkImageToVTKImageFilter.h C_fileIO.h)
 
 set( MOC_Hdrs SimpleView.h )
 

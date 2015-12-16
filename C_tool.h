@@ -53,6 +53,7 @@
 #include <itkCurvatureFlowImageFilter.h>
 //#include "10_include\itkOpenCVImageBridge.h" /*opencv*/
 //#include <cv.h>
+#include "itkImageToVTKImageFilter.h"
 #include <itkExtractImageFilter.h>
 /*wide string*/
 #include <locale>
@@ -87,7 +88,7 @@ public:
 	typedef itk::Image<signed short, dimension2D >  signedShort2D;
 	typedef itk::ImageFileReader< uchar2D > FileReaderuchar2D;
 	typedef itk::ImageFileWriter< uchar2D > FileWriteruchar2D;
-//    typedef itk::ImageToVTKImageFilter< uchar2D > toVTKuchar2D;
+    typedef itk::ImageToVTKImageFilter< uchar2D > toVTKuchar2D;
 	//3D
 	static const int  dimension= 3;
 	typedef itk::Image< float, dimension>  float3D;

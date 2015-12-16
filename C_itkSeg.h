@@ -8,7 +8,7 @@ public:
 	~C_itkSeg();
 	void setParameter(int);
 
-protected:
+//protected:
 	unsigned int numberOfInitialClasses, numberOfClasses;
 
 	uchar2D::Pointer kmeanMethod2D(signedShort2D::Pointer);
