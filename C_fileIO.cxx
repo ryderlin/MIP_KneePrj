@@ -34,6 +34,11 @@ void C_fileIO::readFromOtherImage (uchar2D::Pointer image)
 
 }
 
+void C_fileIO::readFromOtherOutput(uchar2D::Pointer image)
+{
+    m_oriImage = image;
+}
+
 C_fileIO::uchar2D::Pointer C_fileIO::originalImages( )
 {
 	return m_oriImage;

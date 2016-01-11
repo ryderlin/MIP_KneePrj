@@ -14,6 +14,7 @@
 
 #include "vtkSmartPointer.h"    // Required for smart pointer internal ivars.
 #include <QMainWindow>
+#include "C_fileIO.h"
 
 // Forward Qt class declarations
 class Ui_SimpleView;
@@ -37,6 +38,7 @@ public slots:
 
   virtual void slotOpenFile();
   virtual void slotExit();
+  virtual void slotRunMethod();
   virtual void displayImage(vtkImageData *image);
 
 protected:
@@ -50,6 +52,7 @@ private:
 
   // Designer form
   Ui_SimpleView *ui;
+  C_fileIO myImage2D;
 };
 
 #endif // SimpleView_H

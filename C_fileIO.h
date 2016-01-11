@@ -8,6 +8,7 @@ public:
 	~C_fileIO();
 	void readFiletoImages( const char* dataPath );
 	void readFromOtherImage (uchar2D::Pointer);
+    void readFromOtherOutput(uchar2D::Pointer);
 	void writeImageToFile( const char* dataPath );
 	vtkSmartPointer< vtkRenderer > vtkRender();
 //	cv::Mat getMat();
