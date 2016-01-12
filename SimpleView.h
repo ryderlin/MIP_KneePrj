@@ -38,7 +38,9 @@ public slots:
 
   virtual void slotOpenFile();
   virtual void slotExit();
-  virtual void slotRunMethod();
+  virtual void slotRunMrf();
+  virtual void slotRunSig();
+  virtual void slotReset();
   virtual void displayImage(vtkImageData *image);
 
 protected:
@@ -53,6 +55,11 @@ private:
   // Designer form
   Ui_SimpleView *ui;
   C_fileIO myImage2D;
+  static const int  dimension2D= 2;
+  typedef itk::Image<float, dimension2D >  float2D;
+  typedef itk::Image<unsigned char, dimension2D> uchar2D;
+  uchar2D::Pointer OutImage;
+  QString InputFile;
 };
 
 #endif // SimpleView_H

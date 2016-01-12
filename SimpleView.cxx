@@ -46,6 +46,7 @@
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
+typedef itk::Image<unsigned char/*RGBPixelType*/,2> ImageType;
 // Constructor
 SimpleView::SimpleView()
 {
@@ -55,7 +56,11 @@ SimpleView::SimpleView()
     // Set up action signals and slots
     connect(this->ui->actionOpenFile, SIGNAL(triggered()), this, SLOT(slotOpenFile()));
     connect(this->ui->actionExit, SIGNAL(triggered()), this, SLOT(slotExit()));
-    connect(this->ui->btnRun, SIGNAL (released()),this, SLOT (slotRunMethod()));
+    connect(this->ui->btnRunMrf, SIGNAL (released()),this, SLOT (slotRunMrf()));
+    connect(this->ui->btnRunSig, SIGNAL (released()),this, SLOT (slotRunSig()));
+    connect(this->ui->btnReset, SIGNAL (released()),this, SLOT (slotReset()));
+    this->ui->qvtkWidget_Ori->repaint();
+    this->ui->qvtkWidget_Seg->hide();
 }
 
 SimpleView::~SimpleView()
@@ -68,17 +73,16 @@ SimpleView::~SimpleView()
 void SimpleView::slotOpenFile()
 {
 
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath());
+    InputFile = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath());
 
-    myImage2D.readFiletoImages(fileName.toStdString().c_str());
-//    myImage2D.readFiletoImages("/media/sf_shared_host/1.bmp");
-    C_fileIO kmeanImage;
-    C_fileIO mrfImage;
-    C_itkSeg mySeg;
-    mySeg.setParameter(this->ui->leIterationNum->text().toInt());
+//    myImage2D.readFiletoImages(InputFile.toStdString().c_str());
+////    myImage2D.readFiletoImages("/media/sf_shared_host/1.bmp");
+//    C_fileIO kmeanImage;
+//    C_fileIO mrfImage;
+//    C_itkSeg mySeg;
+//    mySeg.setParameter(this->ui->leIterationNum->text().toInt());
 
-    typedef itk::RGBPixel<unsigned char> RGBPixelType;
-    typedef itk::Image<unsigned char/*RGBPixelType*/,2> ImageType;
+//    typedef itk::RGBPixel<unsigned char> RGBPixelType;
     typedef itk::ImageFileReader<ImageType> ReaderType;
     ReaderType::Pointer reader = ReaderType::New();
 /*
@@ -101,7 +105,7 @@ void SimpleView::slotOpenFile()
     /***** DICOM讀檔 *****/
     //reader->SetImageIO( gdcmIO );
     //vtkDICOMImageReader *reader=vtkDICOMImageReader::New();
-    reader->SetFileName(fileName.toLatin1().data());
+    reader->SetFileName(InputFile.toLatin1().data());
     //reader->SetFileName("/Users/Chris/Downloads/ntu.jpg");
     reader->Update();
 //    C_itkSeg mySeg;
@@ -128,32 +132,34 @@ void SimpleView::slotOpenFile()
     // setup and connect itk with vtk
 
     //sigmoid filter start
-    double alpha = this->ui->leSigAlpha->text().toDouble();
-    double beta = this->ui->leSigBeta->text().toDouble();
-    typedef itk::SigmoidImageFilter <ImageType, ImageType>
-      SigmoidImageFilterType;
+//    double alpha = this->ui->leSigAlpha->text().toDouble();
+//    double beta = this->ui->leSigBeta->text().toDouble();
+//    typedef itk::SigmoidImageFilter <ImageType, ImageType>
+//      SigmoidImageFilterType;
 
-    SigmoidImageFilterType::Pointer sigmoidFilter
-      = SigmoidImageFilterType::New();
-    sigmoidFilter->SetInput(reader->GetOutput());
-    sigmoidFilter->SetOutputMinimum(0);
-    sigmoidFilter->SetOutputMaximum(itk::NumericTraits< signed short >::max());
-    sigmoidFilter->SetAlpha(alpha);
-    sigmoidFilter->SetBeta(beta);
+//    SigmoidImageFilterType::Pointer sigmoidFilter
+//      = SigmoidImageFilterType::New();
+//    sigmoidFilter->SetInput(reader->GetOutput());
+//    sigmoidFilter->SetOutputMinimum(0);
+//    sigmoidFilter->SetOutputMaximum(itk::NumericTraits< signed short >::max());
+//    sigmoidFilter->SetAlpha(alpha);
+//    sigmoidFilter->SetBeta(beta);
 
-//    myImage2D.readFromOtherImage(sigmoidFilter->GetOutput());
-    myImage2D.readFromOtherOutput(sigmoidFilter->GetOutput());
-    kmeanImage.readFromOtherImage(mySeg.kmeanMethod2D( myImage2D.castsignedShort2D())) ;
-    mrfImage.readFromOtherImage(  mySeg.markovMethod2D( myImage2D.castsignedShort2D(), kmeanImage.originalImages()  )  );
-    this->ui->qvtkWidget->GetRenderWindow()->AddRenderer(mrfImage.vtkRender());
-    this->ui->qvtkWidget->repaint();
-    return;
+////    myImage2D.readFromOtherImage(sigmoidFilter->GetOutput());
+//    myImage2D.readFromOtherOutput(sigmoidFilter->GetOutput());
+//    kmeanImage.readFromOtherImage(mySeg.kmeanMethod2D( myImage2D.castsignedShort2D())) ;
+//    mrfImage.readFromOtherImage(  mySeg.markovMethod2D( myImage2D.castsignedShort2D(), kmeanImage.originalImages()  )  );
+//    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(mrfImage.vtkRender());
+//    this->ui->qvtkWidget_Seg->repaint();
+//    return;
+//    OutImage = reader->GetOutput();
+    myImage2D.readFromOtherOutput(reader->GetOutput());
     //sigmoid filter end
     ConnectorType::Pointer connector = ConnectorType::New();
     //connector->GetExporter()->SetInput(reader->GetOutput());
     //connector->GetImporter()->Update();
-//    connector->SetInput(reader->GetOutput());
-    connector->SetInput(sigmoidFilter->GetOutput());
+    connector->SetInput(reader->GetOutput());
+//    connector->SetInput(sigmoidFilter->GetOutput());
     connector->Update();
 
     // flip image in Y axis (翻轉image, 逆時針180旋轉)
@@ -192,9 +198,43 @@ void SimpleView::slotOpenFile()
     */
 }
 
-void SimpleView::slotRunMethod()
+void SimpleView::slotRunMrf()
 {
+    C_fileIO kmeanImage;
+    C_fileIO mrfImage;
+    C_itkSeg mySeg;
+    mySeg.setParameter(this->ui->leIterationNum->text().toInt());
+    kmeanImage.readFromOtherImage(mySeg.kmeanMethod2D( myImage2D.castsignedShort2D())) ;
+    mrfImage.readFromOtherImage(  mySeg.markovMethod2D( myImage2D.castsignedShort2D(), kmeanImage.originalImages()  )  );
+    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(mrfImage.vtkRender());
+    this->ui->qvtkWidget_Seg->repaint();
+    this->ui->qvtkWidget_Seg->show();
+}
 
+void SimpleView::slotRunSig()
+{
+    double alpha = this->ui->leSigAlpha->text().toDouble();
+    double beta = this->ui->leSigBeta->text().toDouble();
+    typedef itk::SigmoidImageFilter <ImageType, ImageType>
+      SigmoidImageFilterType;
+
+    SigmoidImageFilterType::Pointer sigmoidFilter
+      = SigmoidImageFilterType::New();
+    sigmoidFilter->SetInput(myImage2D.originalImages());
+    sigmoidFilter->SetOutputMinimum(0);
+    sigmoidFilter->SetOutputMaximum(itk::NumericTraits< signed short >::max());
+    sigmoidFilter->SetAlpha(alpha);
+    sigmoidFilter->SetBeta(beta);
+    myImage2D.readFromOtherOutput(sigmoidFilter->GetOutput());
+    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+    this->ui->qvtkWidget_Seg->repaint();
+    this->ui->qvtkWidget_Seg->show();
+}
+
+void SimpleView::slotReset()
+{
+    this->ui->qvtkWidget_Seg->hide();
+    myImage2D.readFiletoImages(InputFile.toStdString().c_str());
 }
 
 void SimpleView::slotExit() {
@@ -238,12 +278,12 @@ void SimpleView::displayImage(vtkImageData *image)
     //renderer->SetActiveCamera(camera);
     //renderer->ResetCamera();
 
-    this->ui->qvtkWidget->SetRenderWindow(renderWindow);
+    this->ui->qvtkWidget_Ori->SetRenderWindow(renderWindow);
 
     // window interactor style for display images
     vtkSmartPointer<vtkInteractorStyleImage> style = vtkSmartPointer<vtkInteractorStyleImage>::New();
     // set interactor style to the qvtkWidget Interactor
-    this->ui->qvtkWidget->GetInteractor()->SetInteractorStyle(style);
+    this->ui->qvtkWidget_Ori->GetInteractor()->SetInteractorStyle(style);
 
-    this->ui->qvtkWidget->update();
+    this->ui->qvtkWidget_Ori->update();
 }
