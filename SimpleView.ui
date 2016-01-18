@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>820</width>
-    <height>612</height>
+    <width>1177</width>
+    <height>719</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,8 +29,8 @@
      <rect>
       <x>20</x>
       <y>120</y>
-      <width>381</width>
-      <height>371</height>
+      <width>561</width>
+      <height>531</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -103,10 +103,10 @@
    <widget class="QGroupBox" name="groupBoxGraph_2">
     <property name="geometry">
      <rect>
-      <x>420</x>
+      <x>590</x>
       <y>120</y>
-      <width>381</width>
-      <height>371</height>
+      <width>561</width>
+      <height>531</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -198,7 +198,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>iteration</string>
+      <string>classes</string>
      </property>
     </widget>
     <widget class="QLineEdit" name="leIterationNum">
@@ -296,15 +296,6 @@
       <string>alpha</string>
      </property>
     </widget>
-    <zorder>btnRunSig</zorder>
-    <zorder>lbIteration_4</zorder>
-    <zorder>leSigBeta</zorder>
-    <zorder>leSigAlpha</zorder>
-    <zorder>lbIteration_3</zorder>
-    <zorder>lbIteration_4</zorder>
-    <zorder>leSigBeta</zorder>
-    <zorder>leSigAlpha</zorder>
-    <zorder>lbIteration_3</zorder>
    </widget>
    <widget class="QPushButton" name="btnReset">
     <property name="geometry">
@@ -325,7 +316,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>820</width>
+     <width>1177</width>
      <height>25</height>
     </rect>
    </property>

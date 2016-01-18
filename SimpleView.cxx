@@ -21,8 +21,10 @@
 #include "itkRecursiveGaussianImageFilter.h"
 #include "itkImageFileWriter.h"
 #include "itkGDCMImageIO.h"
+#include "itkBMPImageIOFactory.h"
 //VTK
 
+#include <vtkAutoInit.h>
 #include <vtkDataObjectToTable.h>
 #include <vtkElevationFilter.h>
 #include <vtkPolyDataMapper.h>
@@ -32,7 +34,6 @@
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
-//#include <vtkDICOMImageReader.h>
 #include <vtkImageViewer2.h>
 #include <vtkImageFlip.h>
 #include <vtkImageActor.h>
@@ -50,6 +51,9 @@ typedef itk::Image<unsigned char/*RGBPixelType*/,2> ImageType;
 // Constructor
 SimpleView::SimpleView()
 {
+    VTK_MODULE_INIT(vtkRenderingOpenGL);
+    VTK_MODULE_INIT(vtkInteractionStyle);
+//    VTK_MODULE_INIT(vtkRenderingWindow);sfdfs
     this->ui = new Ui_SimpleView;
     this->ui->setupUi(this);
 
@@ -72,26 +76,13 @@ SimpleView::~SimpleView()
 // Action to be taken upon file open
 void SimpleView::slotOpenFile()
 {
-
+    itk::BMPImageIOFactory::RegisterOneFactory();
     InputFile = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath());
-
-//    myImage2D.readFiletoImages(InputFile.toStdString().c_str());
-////    myImage2D.readFiletoImages("/media/sf_shared_host/1.bmp");
-//    C_fileIO kmeanImage;
-//    C_fileIO mrfImage;
-//    C_itkSeg mySeg;
-//    mySeg.setParameter(this->ui->leIterationNum->text().toInt());
 
 //    typedef itk::RGBPixel<unsigned char> RGBPixelType;
     typedef itk::ImageFileReader<ImageType> ReaderType;
     ReaderType::Pointer reader = ReaderType::New();
-/*
-    kmeanImage.readFromOtherImage(mySeg.kmeanMethod2D( myImage2D.castsignedShort2D())) ;
-    mrfImage.readFromOtherImage(  mySeg.markovMethod2D( myImage2D.castsignedShort2D(), kmeanImage.originalImages()  )  );
-    this->ui->qvtkWidget->GetRenderWindow()->AddRenderer(mrfImage.vtkRender());
-    this->ui->qvtkWidget->repaint();
-    return;
-    */
+
     /***** 變數設定 *****/
     // image is grayscale
 //    typedef itk::Image<unsigned short,2> ImageType; //要用unsigned short以上型態，dicom pixel value才不會爆掉
@@ -101,65 +92,14 @@ void SimpleView::slotOpenFile()
     //typedef itk::ImageFileWriter<ImageType> WriterType;
     typedef itk::ImageToVTKImageFilter<ImageType> ConnectorType;
 
-//    this->ui->lbOriImage->back
-    /***** DICOM讀檔 *****/
-    //reader->SetImageIO( gdcmIO );
-    //vtkDICOMImageReader *reader=vtkDICOMImageReader::New();
     reader->SetFileName(InputFile.toLatin1().data());
-    //reader->SetFileName("/Users/Chris/Downloads/ntu.jpg");
     reader->Update();
-//    C_itkSeg mySeg;
-//    mySeg.setParameter(5);
-//    mySeg.kmeanMethod2D(reader->GetOutput());
 
-    /***** DICOM pixel value *****/
-    /*
-      ImageType::Pointer image = reader->GetOutput();
-      ImageType::IndexType pixelIndex;
-      pixelIndex[0] = 400;   // x position
-      pixelIndex[1] = 1600;   // y position
-      std::cout << image->GetPixel(pixelIndex);
-    */
-
-    /***** DICOM寫檔 *****/
-    /*
-      WriterType::Pointer writer = WriterType::New();
-      writer->SetFileName("/Users/Chris/Downloads/DICOM_IMG/test.dcm");
-      writer->SetInput(reader->GetOutput());
-      writer->Update();
-    */
+    myImage2D.readFromOtherOutput(reader->GetOutput());
 
     // setup and connect itk with vtk
-
-    //sigmoid filter start
-//    double alpha = this->ui->leSigAlpha->text().toDouble();
-//    double beta = this->ui->leSigBeta->text().toDouble();
-//    typedef itk::SigmoidImageFilter <ImageType, ImageType>
-//      SigmoidImageFilterType;
-
-//    SigmoidImageFilterType::Pointer sigmoidFilter
-//      = SigmoidImageFilterType::New();
-//    sigmoidFilter->SetInput(reader->GetOutput());
-//    sigmoidFilter->SetOutputMinimum(0);
-//    sigmoidFilter->SetOutputMaximum(itk::NumericTraits< signed short >::max());
-//    sigmoidFilter->SetAlpha(alpha);
-//    sigmoidFilter->SetBeta(beta);
-
-////    myImage2D.readFromOtherImage(sigmoidFilter->GetOutput());
-//    myImage2D.readFromOtherOutput(sigmoidFilter->GetOutput());
-//    kmeanImage.readFromOtherImage(mySeg.kmeanMethod2D( myImage2D.castsignedShort2D())) ;
-//    mrfImage.readFromOtherImage(  mySeg.markovMethod2D( myImage2D.castsignedShort2D(), kmeanImage.originalImages()  )  );
-//    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(mrfImage.vtkRender());
-//    this->ui->qvtkWidget_Seg->repaint();
-//    return;
-//    OutImage = reader->GetOutput();
-    myImage2D.readFromOtherOutput(reader->GetOutput());
-    //sigmoid filter end
     ConnectorType::Pointer connector = ConnectorType::New();
-    //connector->GetExporter()->SetInput(reader->GetOutput());
-    //connector->GetImporter()->Update();
     connector->SetInput(reader->GetOutput());
-//    connector->SetInput(sigmoidFilter->GetOutput());
     connector->Update();
 
     // flip image in Y axis (翻轉image, 逆時針180旋轉)
@@ -169,7 +109,6 @@ void SimpleView::slotOpenFile()
     flipYFilter->Update();
 
     vtkSmartPointer<vtkImageData> vtkimage = vtkImageData::New();
-    //vtkimage->DeepCopy(connector->GetOutput());
     vtkimage->DeepCopy(flipYFilter->GetOutput());
 
     this->displayImage(vtkimage);
@@ -178,24 +117,6 @@ void SimpleView::slotOpenFile()
     connector = NULL;
     flipYFilter = NULL;
     vtkimage = NULL;
-
-    /* display image in vtkViewer
-        vtkSmartPointer<vtkImageViewer2> viewer = vtkImageViewer2::New();
-        //viewer = vtkImageViewer2::New();
-
-        //set VTK Viewer to QVTKWidget in Qt's UI
-        this->ui->qvtkWidget->SetRenderWindow(viewer->GetRenderWindow());
-        viewer->SetupInteractor(this->ui->qvtkWidget->GetRenderWindow()->GetInteractor());
-
-        //Set input image to VTK viewer
-        viewer->SetInputData(vtkimage);
-        //viewer->SetInputData(connector->GetOutput());
-        viewer->GetRenderer()->ResetCamera();
-        viewer->Render();
-        //viewer->SetColorWindow(255);
-        //viewer->SetColorLevel(128);
-        this->ui->qvtkWidget->update();
-    */
 }
 
 void SimpleView::slotRunMrf()
@@ -243,41 +164,17 @@ void SimpleView::slotExit() {
 
 void SimpleView::displayImage(vtkImageData *image)
 {
-    /*
-    int *dim= image->GetDimensions();
-    double *spacing = image->GetSpacing();
-    double *origin = image->GetOrigin();
-
-    float Cx = (dim[0] * spacing[0])/2. + origin[0];
-    float Cy = (dim[1] * spacing[1])/2. + origin[1];
-    */
-
     // Create image actor
     vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
-    // Create camera
-    //vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
-    // Create renderer and render window
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
     renderWindow->AddRenderer(renderer);
 
-    /*
-    camera->ParallelProjectionOn();
-    camera->SetFocalPoint(Cx,Cy,0);
-    camera->SetPosition(Cx,Cy,1);
-    */
-    //
-    //    // to flip de image
-    //    camera->SetViewUp (0, 1, 0);
-    //
     // set actor properties
     actor->SetInputData(image);
     //actor->InterpolateOff();
 
     renderer->AddActor(actor);
-    //renderer->SetActiveCamera(camera);
-    //renderer->ResetCamera();
-
     this->ui->qvtkWidget_Ori->SetRenderWindow(renderWindow);
 
     // window interactor style for display images
