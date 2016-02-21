@@ -20,7 +20,7 @@ void C_fileIO::writeImageToFile( const char* dataPath )
 {
 	FileWriteruchar2D::Pointer writer = FileWriteruchar2D::New();
 	writer->SetInput( m_oriImage );
-	writer->SetFileName( "./outSucess.png" );
+    writer->SetFileName( dataPath );
 	writer->Update();
 }
 
@@ -98,15 +98,15 @@ C_fileIO::float2D::Pointer C_fileIO::castfloat2D()
 
  
   try
-    {
+  {
     filter->Update();
 
 	return filter->GetOutput();
-    }
+  }
   catch( itk::ExceptionObject & e )
-    {
+  {
     std::cerr << "Error: " << e << std::endl;
-    }
+  }
 
 
 }

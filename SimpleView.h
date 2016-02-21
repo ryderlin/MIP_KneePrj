@@ -40,7 +40,9 @@ public slots:
   virtual void slotExit();
   virtual void slotRunMrf();
   virtual void slotRunSig();
+  virtual void slotRunAD();
   virtual void slotReset();
+  virtual void slotWriteFile();
   virtual void displayImage(vtkImageData *image);
 
 protected:
