@@ -385,14 +385,40 @@
    <widget class="QPushButton" name="btnWriteFile">
     <property name="geometry">
      <rect>
-      <x>760</x>
+      <x>790</x>
       <y>10</y>
-      <width>111</width>
-      <height>71</height>
+      <width>81</width>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
      <string>Write files</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnSeg">
+    <property name="geometry">
+     <rect>
+      <x>790</x>
+      <y>60</y>
+      <width>81</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Segment</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnTest">
+    <property name="geometry">
+     <rect>
+      <x>700</x>
+      <y>60</y>
+      <width>81</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>test</string>
     </property>
    </widget>
   </widget>
@@ -493,6 +519,18 @@
    <header>QVTKWidget.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>leAD_Iteration</tabstop>
+  <tabstop>leAD_Conductance</tabstop>
+  <tabstop>btnRunAD</tabstop>
+  <tabstop>leSigAlpha</tabstop>
+  <tabstop>leSigBeta</tabstop>
+  <tabstop>btnRunSig</tabstop>
+  <tabstop>leIterationNum</tabstop>
+  <tabstop>btnRunMrf</tabstop>
+  <tabstop>btnWriteFile</tabstop>
+  <tabstop>btnReset</tabstop>
+ </tabstops>
  <resources>
   <include location="Icons/icons.qrc"/>
  </resources>

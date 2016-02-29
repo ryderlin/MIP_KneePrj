@@ -1,4 +1,4 @@
-/*=========================================================================
+﻿/*=========================================================================
   Program:   Visualization Toolkit
   Module:    SimpleView.h
   Language:  C++
@@ -16,6 +16,12 @@
 #include <QMainWindow>
 #include "C_fileIO.h"
 
+#if 0//set rgb pixel
+typedef itk::RGBPixel<unsigned char> RGBPixelType;
+typedef itk::Image<RGBPixelType,2> ImageType;
+#else
+typedef itk::Image<unsigned char,2> ImageType;
+#endif
 // Forward Qt class declarations
 class Ui_SimpleView;
 
@@ -43,7 +49,10 @@ public slots:
   virtual void slotRunAD();
   virtual void slotReset();
   virtual void slotWriteFile();
+  virtual void slotSegmentation();
+  virtual void slotTest();
   virtual void displayImage(vtkImageData *image);
+  virtual void displayImage2(vtkImageData *image);
 
 protected:
 
@@ -51,6 +60,7 @@ protected slots:
 
 private:
 
+  bool up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexType pixelIndex, short pixel_value);
   vtkSmartPointer<vtkQtTableView> TableView;
   //vtkImageViewer2 *viewer;
 
