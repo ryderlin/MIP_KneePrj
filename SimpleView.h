@@ -53,6 +53,7 @@ public slots:
   virtual void slotTest();
   virtual void displayImage(vtkImageData *image);
   virtual void displayImage2(vtkImageData *image);
+  virtual void displayImage3(vtkImageData *image);
 
 protected:
 
@@ -60,6 +61,7 @@ protected slots:
 
 private:
 
+  static void handle_double_click(vtkObject* obj, unsigned long event, void* ClientData, void* CallData);
   bool up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexType pixelIndex, short pixel_value);
   vtkSmartPointer<vtkQtTableView> TableView;
   //vtkImageViewer2 *viewer;

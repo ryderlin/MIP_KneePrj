@@ -26,7 +26,6 @@
 #include "itkSobelEdgeDetectionImageFilter.h"
 #include "itkSigmoidImageFilter.h"
 //VTK
-
 #include <vtkAutoInit.h>
 #include <vtkDataObjectToTable.h>
 #include <vtkElevationFilter.h>
@@ -45,9 +44,22 @@
 #include <vtkImageViewer2.h>
 #include <vtkImageFlip.h>
 #include <vtkImageActor.h>
+#include <vtkActor.h>
 #include <vtkCamera.h>
 #include <vtkRenderer.h>
 #include <vtkInteractorStyleImage.h>
+// double click
+#include <vtkCallbackCommand.h>
+#include <vtkCoordinate.h>
+#include <vtkRendererCollection.h>
+// color point
+#include <vtkImageTracerWidget.h>
+#include <vtkProperty.h>
+#include <vtkVertexGlyphFilter.h>
+#include <vtkPointData.h>
+#include <vtkPoints.h>
+#include <vtkPolyData.h>
+#include <vtkPolyDataMapper.h>
 
 #include "vtkSmartPointer.h"
 #include "C_itkSeg.h"
@@ -110,13 +122,28 @@ public:
     this->Viewer = viewer;
     }
 
+  void SetViewer2(QVTKWidget *qvtkw)
+  {
+      this->qvtkw = qvtkw;
+  }
+
+  void SetActor(vtkImageActor* actor)
+  {
+      this->Actor = actor;
+  }
+
   virtual void Execute(vtkObject *, unsigned long vtkNotUsed(event), void *)
     {
-    vtkRenderWindowInteractor *interactor =
-      this->Viewer->GetRenderWindow()->GetInteractor();
-    vtkRenderer* renderer = this->Viewer->GetRenderer();
-    vtkImageActor* actor = this->Viewer->GetImageActor();
-    vtkImageData* image = this->Viewer->GetInput();
+//    vtkRenderWindowInteractor *interactor = this->Viewer->GetRenderWindow()->GetInteractor();
+//      vtkRenderer* renderer = this->Viewer->GetRenderer();
+//      vtkImageActor* actor = this->Viewer->GetImageActor();
+//      vtkImageData* image = this->Viewer->GetInput();
+//      vtkInteractorStyle *style = vtkInteractorStyle::SafeDownCast(
+//        interactor->GetInteractorStyle());
+    vtkRenderWindowInteractor *interactor = this->qvtkw->GetRenderWindow()->GetInteractor();
+    vtkRenderer* renderer = this->qvtkw->GetRenderWindow()->GetRenderers()->GetFirstRenderer();
+    vtkImageActor* actor = this->Actor;//(vtkImageActor*)(renderer->GetActors()->GetLastActor());
+    vtkImageData* image = actor->GetInput();
     vtkInteractorStyle *style = vtkInteractorStyle::SafeDownCast(
       interactor->GetInteractorStyle());
 
@@ -163,26 +190,29 @@ public:
     this->Picker->GetPickPosition(pos);
 
     int image_coordinate[3];
+    image_coordinate[0] = vtkMath::Round(pos[0]);
+    image_coordinate[1] = vtkMath::Round(pos[1]);
+    image_coordinate[2] = 0;
 
-    int axis = this->Viewer->GetSliceOrientation();
-    switch (axis)
-      {
-      case vtkImageViewer2::SLICE_ORIENTATION_XZ:
-        image_coordinate[0] = vtkMath::Round(pos[0]);
-        image_coordinate[1] = this->Viewer->GetSlice();
-        image_coordinate[2] = vtkMath::Round(pos[2]);
-        break;
-      case vtkImageViewer2::SLICE_ORIENTATION_YZ:
-        image_coordinate[0] = this->Viewer->GetSlice();
-        image_coordinate[1] = vtkMath::Round(pos[0]);
-        image_coordinate[2] = vtkMath::Round(pos[1]);
-        break;
-      default:  // vtkImageViewer2::SLICE_ORIENTATION_XY
-        image_coordinate[0] = vtkMath::Round(pos[0]);
-        image_coordinate[1] = vtkMath::Round(pos[1]);
-        image_coordinate[2] = this->Viewer->GetSlice();
-        break;
-      }
+//    int axis = this->Viewer->GetSliceOrientation();
+//    switch (axis)
+//      {
+//      case vtkImageViewer2::SLICE_ORIENTATION_XZ:
+//        image_coordinate[0] = vtkMath::Round(pos[0]);
+//        image_coordinate[1] = this->Viewer->GetSlice();
+//        image_coordinate[2] = vtkMath::Round(pos[2]);
+//        break;
+//      case vtkImageViewer2::SLICE_ORIENTATION_YZ:
+//        image_coordinate[0] = this->Viewer->GetSlice();
+//        image_coordinate[1] = vtkMath::Round(pos[0]);
+//        image_coordinate[2] = vtkMath::Round(pos[1]);
+//        break;
+//      default:  // vtkImageViewer2::SLICE_ORIENTATION_XY
+//        image_coordinate[0] = vtkMath::Round(pos[0]);
+//        image_coordinate[1] = vtkMath::Round(pos[1]);
+//        image_coordinate[2] = this->Viewer->GetSlice();
+//        break;
+//      }
 
     std::string message = "Location: ( ";
     message += vtkVariant(image_coordinate[0]).ToString();
@@ -203,6 +233,8 @@ public:
       }
 
     this->Annotation->SetText( 0, message.c_str() );
+    printf("gogogogo!!!\n");
+    printf("%s\n", message.c_str());
     interactor->Render();
     style->OnMouseMove();
     }
@@ -211,6 +243,8 @@ private:
   vtkImageViewer2*      Viewer;      // Pointer to the viewer
   vtkPropPicker*        Picker;      // Pointer to the picker
   vtkCornerAnnotation*  Annotation;  // Pointer to the annotation
+  QVTKWidget*           qvtkw;
+  vtkImageActor*        Actor;
 };
 
 // Constructor
@@ -281,7 +315,7 @@ void SimpleView::slotOpenFile()
     vtkSmartPointer<vtkImageData> vtkimage = vtkImageData::New();
     vtkimage->DeepCopy(flipYFilter->GetOutput());
 
-    this->displayImage2(vtkimage);
+    this->displayImage3(vtkimage);
 
     reader = NULL;
     connector = NULL;
@@ -514,6 +548,7 @@ void SimpleView::displayImage2(vtkImageData *image)
     callback->SetViewer(imageViewer);
     callback->SetAnnotation(cornerAnnotation);
     callback->SetPicker(propPicker);
+    callback->SetViewer2(this->ui->qvtkWidget_Ori);
 
     // InteractorStyleImage allows for the following controls:
     // 1) middle mouse + move = camera pan
@@ -522,6 +557,7 @@ void SimpleView::displayImage2(vtkImageData *image)
     // 4) middle mouse wheel scroll = zoom
     // 5) 'r' = reset window/level
     // 6) shift + 'r' = reset camera
+    imageViewer->SetupInteractor(this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor());
     vtkInteractorStyleImage* imageStyle =
       imageViewer->GetInteractorStyle();
     imageStyle->AddObserver(vtkCommand::MouseMoveEvent, callback);
@@ -531,9 +567,69 @@ void SimpleView::displayImage2(vtkImageData *image)
 //    renderWindowInteractor->Start();
     this->ui->qvtkWidget_Ori->SetRenderWindow(imageViewer->GetRenderWindow());
 //    imageViewer->SetupInteractor(this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor());
-//    imageViewer->Render();
+//    this->ui->qvtkWidget_Ori->GetInteractor()->GetInteractorStyle()->AddObserver(vtkCommand::MouseMoveEvent, callback);
     this->ui->qvtkWidget_Ori->update();
+    vtkRenderer* renderer1 = imageViewer->GetRenderer();
 #endif
+}
+
+void SimpleView::displayImage3(vtkImageData *image)
+{
+    // Picker to pick pixels
+    vtkSmartPointer<vtkPropPicker> propPicker =
+      vtkSmartPointer<vtkPropPicker>::New();
+    propPicker->PickFromListOn();
+    // Create image actor
+    vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
+    vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+    vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+    renderWindow->AddRenderer(renderer);
+    renderWindow->SetSize(800, 600);
+
+    // set actor properties
+    actor->SetInputData(image);
+    // Give the picker a prop to pick
+    propPicker->AddPickList(actor);
+
+    // disable interpolation, so we can see each pixel
+    actor->InterpolateOff();
+
+    renderer->AddActor(actor);
+    renderer->ResetCamera();
+    renderer->GradientBackgroundOn();
+    renderer->SetBackground(0.6, 0.6, 0.5);
+    renderer->SetBackground2(0.3, 0.3, 0.2);
+    // Annotate the image with window/level and mouse over pixel
+    // information
+    vtkSmartPointer<vtkCornerAnnotation> cornerAnnotation =
+      vtkSmartPointer<vtkCornerAnnotation>::New();
+    cornerAnnotation->SetLinearFontScaleFactor(2);
+    cornerAnnotation->SetNonlinearFontScaleFactor(1);
+    cornerAnnotation->SetMaximumFontSize(20);
+    cornerAnnotation->SetText(0, "Off Image");
+    cornerAnnotation->SetText(3, "<window>\n<level>");
+    cornerAnnotation->GetTextProperty()->SetColor(1, 0, 0);
+
+    renderer->AddViewProp(cornerAnnotation);
+    // Callback listens to MouseMoveEvents invoked by the interactor's style
+    vtkSmartPointer<vtkImageInteractionCallback> callback =
+      vtkSmartPointer<vtkImageInteractionCallback>::New();
+//    callback->SetViewer(imageViewer);
+    callback->SetAnnotation(cornerAnnotation);
+    callback->SetPicker(propPicker);
+    callback->SetViewer2(this->ui->qvtkWidget_Ori);
+    callback->SetActor(actor);
+
+    this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor()->Initialize();
+    this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor()->Start();
+    this->ui->qvtkWidget_Ori->SetRenderWindow(renderWindow);
+
+    // window interactor style for display images
+    vtkSmartPointer<vtkInteractorStyleImage> style = vtkSmartPointer<vtkInteractorStyleImage>::New();
+    // set interactor style to the qvtkWidget Interactor
+    this->ui->qvtkWidget_Ori->GetInteractor()->SetInteractorStyle(style);
+    this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor()->GetInteractorStyle()->AddObserver(vtkCommand::MouseMoveEvent, callback);
+    this->ui->qvtkWidget_Ori->update();
 }
 
 void SimpleView::displayImage(vtkImageData *image)
@@ -557,4 +653,85 @@ void SimpleView::displayImage(vtkImageData *image)
     this->ui->qvtkWidget_Ori->GetInteractor()->SetInteractorStyle(style);
 
     this->ui->qvtkWidget_Ori->update();
+#if 1   //test
+    // get double click events
+    vtkCallbackCommand *callback = vtkCallbackCommand::New();
+    callback->SetCallback(SimpleView::handle_double_click);
+    callback->SetClientData(this);
+    this->ui->qvtkWidget_Ori->GetInteractor()->AddObserver(vtkCommand::LeftButtonPressEvent, callback, 1.0);
+#endif
 }
+
+void SimpleView::handle_double_click(vtkObject* obj, unsigned long event, void* ClientData, void* CallData) {
+    SimpleView* self = reinterpret_cast<SimpleView*>(ClientData);
+    vtkRenderWindowInteractor* iren = vtkRenderWindowInteractor::SafeDownCast(obj);
+
+    int currPos[2];
+    iren->GetEventPosition(currPos);
+    cout << currPos[0] <<", " << currPos[1] << endl;
+
+    int x, y;
+    x = currPos[0];
+    y = currPos[1];
+    vtkSmartPointer<vtkCoordinate> coordinate = vtkSmartPointer<vtkCoordinate>::New();
+    coordinate->SetCoordinateSystemToDisplay();
+    coordinate->SetValue(x,y,0);
+
+    // This doesn't produce the right value if the sphere is zoomed in???
+    double *world = coordinate->GetComputedWorldValue(iren->GetRenderWindow()->GetRenderers()->GetFirstRenderer());
+    cout << "World coordinate: " << world[0] << ", " << world[1] << ", " << world[2] << endl;
+
+    // Draw colored point
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    //points->InsertNextPoint (0.0, 0.0, 0.0);
+    //points->InsertNextPoint (x, y, 0.0);
+    points->InsertNextPoint (world[0], world[1], world[2]);
+
+    vtkSmartPointer<vtkPolyData> pointsPolydata = vtkSmartPointer<vtkPolyData>::New();
+    pointsPolydata->SetPoints(points);
+
+    vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
+    vertexFilter->SetInputData(pointsPolydata);
+    vertexFilter->Update();
+
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+    polydata->ShallowCopy(vertexFilter->GetOutput());
+
+    // Setup colors
+    //unsigned char red[3] = {255, 0, 0};
+    unsigned char green[3] = {0, 255, 0};
+    //unsigned char blue[3] = {0, 0, 255};
+
+    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    colors->SetNumberOfComponents(3);
+    colors->SetName ("Colors");
+    //colors->InsertNextTupleValue(red);
+    colors->InsertNextTupleValue(green);
+
+    polydata->GetPointData()->SetScalars(colors);
+
+    // Visualization
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputData(polydata);
+
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    actor->GetProperty()->SetPointSize(5);
+
+    // store camera original value
+    double *tmp_p = self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->GetPosition();
+    double *tmp_fp = self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->GetFocalPoint();
+    double p[3] = {tmp_p[0], tmp_p[1], tmp_p[2]};
+    double fp[3] = {tmp_fp[0], tmp_fp[1], tmp_fp[2]};
+    // draw color point
+    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->AddActor(actor);
+    // reset camera
+    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->ResetCamera();
+    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->Zoom(1.5);
+    // restore camera with original value
+    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->SetPosition(p);
+    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->SetFocalPoint(fp);
+    self->ui->qvtkWidget_Ori->GetRenderWindow()->Render();
+    self->ui->qvtkWidget_Ori->update();
+}
+
