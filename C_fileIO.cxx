@@ -44,6 +44,23 @@ C_fileIO::uchar2D::Pointer C_fileIO::originalImages( )
 	return m_oriImage;
 }
 
+vtkSmartPointer< vtkImageData> C_fileIO::vtkImage()
+{
+    C_fileIO::toVTKuchar2D::Pointer connector = C_fileIO::toVTKuchar2D::New( );
+    vtkSmartPointer< vtkImageData> vtkImage = vtkSmartPointer< vtkImageData  >::New();
+    // flip image in Y axis (翻轉image, 逆時針180旋轉)
+    vtkSmartPointer<vtkImageFlip> flipYFilter = vtkSmartPointer<vtkImageFlip>::New();
+
+    connector->GetExporter( )->SetInput( m_oriImage );
+    connector->GetImporter( )->Update( );
+    flipYFilter->SetFilteredAxis(1); // flip Y axis
+    flipYFilter->SetInputData(connector->GetOutput());
+    flipYFilter->Update();
+    vtkImage->Initialize( );
+    vtkImage->DeepCopy( flipYFilter->GetOutput() );
+    return vtkImage;
+}
+
 vtkSmartPointer< vtkRenderer > C_fileIO::vtkRender()
 {
 	C_fileIO::toVTKuchar2D::Pointer connector = C_fileIO::toVTKuchar2D::New( );

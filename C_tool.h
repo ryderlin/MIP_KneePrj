@@ -33,6 +33,7 @@
 #include <vtkCamera.h>
 #include <vtkImageShiftScale.h>
 #include <vtkImageData.h>
+#include <vtkImageFlip.h>
 #include <vtkPointData.h>
 #include <vtkDataArray.h>
 #include <vtkXMLImageDataReader.h>

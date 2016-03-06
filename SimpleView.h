@@ -54,7 +54,7 @@ public slots:
   virtual void displayImage(vtkImageData *image);
   virtual void displayImage2(vtkImageData *image);
   virtual void displayImage3(vtkImageData *image);
-
+  virtual void updatePixInfo(QString pix_info);
 protected:
 
 protected slots:

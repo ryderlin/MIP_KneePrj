@@ -13,6 +13,7 @@
 //QT
 #include<QFileDialog>
 #include<QDir>
+#include <QGraphicsView>
 //ITK
 #include "itkImage.h"
 #include "itkImageFileReader.h"
@@ -247,6 +248,59 @@ private:
   vtkImageActor*        Actor;
 };
 
+class MyView:public QGraphicsView
+{
+public:
+    MyView( SimpleView *parent=0 ) :  QGraphicsView(parent = 0)
+    {
+        this->Parent = parent;
+        qlPixelInfo = new QLabel(this);
+        qlPixelInfo->setStyleSheet("QLabel { color : red; }");
+    }
+
+
+    void SetImage(QImage img)
+    {
+        this->image = img;
+    }
+
+    void Display()
+    {
+        setScene( new QGraphicsScene( this ) );
+        this->scene()->addPixmap(QPixmap::fromImage(this->image)); // this->image is a QImage
+        this->show();
+    }
+
+    void showPixelInfo(QLabel *ql)
+    {
+
+    }
+
+public slots:
+    void mousePressEvent( QMouseEvent* event )
+    {
+        QPointF pos =  mapToScene( event->pos() );
+        int x = ( int )pos.x();
+        int y = ( int )pos.y();
+        QRgb rgb = this->image.pixel( x, y );
+        QString info;
+        qGreen(rgb);
+        info.sprintf("(%d,%d)=(%d,%d,%d)", x, y, qRed(rgb), qGreen(rgb), qBlue(rgb));
+//        printf("xy = (%d, %d)\n", x, y);
+
+        qlPixelInfo->hide();
+        qlPixelInfo->setGeometry(x, y, 300, 30);
+        qlPixelInfo->setText(info);
+        qlPixelInfo->show();
+    }
+
+private:
+    QImage image;
+    QLabel *qlPixelInfo;
+    SimpleView *Parent;
+};
+
+
 // Constructor
 SimpleView::SimpleView()
 {
@@ -432,6 +486,45 @@ void SimpleView::slotTest()
     this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
     this->ui->qvtkWidget_Seg->repaint();
     this->ui->qvtkWidget_Seg->show();
+#if 1//test
+    // Create an image data
+    vtkSmartPointer<vtkImageData> imageData = vtkSmartPointer<vtkImageData>::New();
+//    vtkImageData imageData;
+    imageData->DeepCopy(myImage2D.vtkImage());
+    int* dims = myImage2D.vtkImage()->GetDimensions();
+    imageData->AllocateScalars(VTK_DOUBLE,3);
+    imageData->SetDimensions(dims);
+    // int dims[3]; // can't do this
+
+    std::cout << "Dims: " << " x: " << dims[0] << " y: " << dims[1] << " z: " << dims[2] << std::endl;
+
+    std::cout << "Number of points: " << imageData->GetNumberOfPoints() << std::endl;
+    std::cout << "Number of cells: " << imageData->GetNumberOfCells() << std::endl;
+    for (int z = 0; z < dims[2]; z++)
+    {
+        for (int y = 0; y < dims[1]; y++)
+        {
+            for (int x = 0; x < dims[0]; x++)
+            {
+//                int* pixel = static_cast<int*>(imageData->GetScalarPointer(x,y,z));
+//                if (pixel[0] != 0)
+//                {
+//                    pixel[0] = 255;
+//                    pixel[1] = 0;
+//                    pixel[2] = 0;
+//                }
+//                if (myImage2D.vtkImage()->GetScalarComponentAsDouble(x,y,z,0) != 0.0)
+//                {
+//                    imageData->SetScalarComponentFromDouble(x,y,z,0, 255);
+//                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
+//                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
+//                }
+            }
+        }
+    }
+    displayImage(imageData);
+
+#endif
 }
 
 void SimpleView::slotSegmentation()
@@ -499,81 +592,8 @@ void SimpleView::slotExit() {
   qApp->exit();
 }
 
+//temp test for pick pixel on QVTKWidget
 void SimpleView::displayImage2(vtkImageData *image)
-{
-#if 1 //for picker
-    vtkSmartPointer<vtkImageViewer2> imageViewer =
-      vtkSmartPointer<vtkImageViewer2>::New();
-    imageViewer->SetInputData(image);
-    // Picker to pick pixels
-    vtkSmartPointer<vtkPropPicker> propPicker =
-      vtkSmartPointer<vtkPropPicker>::New();
-    propPicker->PickFromListOn();
-
-    // Give the picker a prop to pick
-    vtkImageActor* imageActor = imageViewer->GetImageActor();
-    propPicker->AddPickList(imageActor);
-
-    // disable interpolation, so we can see each pixel
-    imageActor->InterpolateOff();
-
-    // Visualize
-//    vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
-//      vtkSmartPointer<vtkRenderWindowInteractor>::New();
-//    imageViewer->SetupInteractor(renderWindowInteractor);
-//    imageViewer->SetSize(600, 600);
-
-    vtkRenderer* renderer = imageViewer->GetRenderer();
-    renderer->ResetCamera();
-    renderer->GradientBackgroundOn();
-    renderer->SetBackground(0.6, 0.6, 0.5);
-    renderer->SetBackground2(0.3, 0.3, 0.2);
-
-    // Annotate the image with window/level and mouse over pixel
-    // information
-    vtkSmartPointer<vtkCornerAnnotation> cornerAnnotation =
-      vtkSmartPointer<vtkCornerAnnotation>::New();
-    cornerAnnotation->SetLinearFontScaleFactor(2);
-    cornerAnnotation->SetNonlinearFontScaleFactor(1);
-    cornerAnnotation->SetMaximumFontSize(20);
-    cornerAnnotation->SetText(0, "Off Image");
-    cornerAnnotation->SetText(3, "<window>\n<level>");
-    cornerAnnotation->GetTextProperty()->SetColor(1, 0, 0);
-
-    imageViewer->GetRenderer()->AddViewProp(cornerAnnotation);
-
-    // Callback listens to MouseMoveEvents invoked by the interactor's style
-    vtkSmartPointer<vtkImageInteractionCallback> callback =
-      vtkSmartPointer<vtkImageInteractionCallback>::New();
-    callback->SetViewer(imageViewer);
-    callback->SetAnnotation(cornerAnnotation);
-    callback->SetPicker(propPicker);
-    callback->SetViewer2(this->ui->qvtkWidget_Ori);
-
-    // InteractorStyleImage allows for the following controls:
-    // 1) middle mouse + move = camera pan
-    // 2) left mouse + move = window/level
-    // 3) right mouse + move = camera zoom
-    // 4) middle mouse wheel scroll = zoom
-    // 5) 'r' = reset window/level
-    // 6) shift + 'r' = reset camera
-    imageViewer->SetupInteractor(this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor());
-    vtkInteractorStyleImage* imageStyle =
-      imageViewer->GetInteractorStyle();
-    imageStyle->AddObserver(vtkCommand::MouseMoveEvent, callback);
-    this->ui->qvtkWidget_Ori->GetInteractor()->SetInteractorStyle(imageStyle);
-
-//    renderWindowInteractor->Initialize();
-//    renderWindowInteractor->Start();
-    this->ui->qvtkWidget_Ori->SetRenderWindow(imageViewer->GetRenderWindow());
-//    imageViewer->SetupInteractor(this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor());
-//    this->ui->qvtkWidget_Ori->GetInteractor()->GetInteractorStyle()->AddObserver(vtkCommand::MouseMoveEvent, callback);
-    this->ui->qvtkWidget_Ori->update();
-    vtkRenderer* renderer1 = imageViewer->GetRenderer();
-#endif
-}
-
-void SimpleView::displayImage3(vtkImageData *image)
 {
     // Picker to pick pixels
     vtkSmartPointer<vtkPropPicker> propPicker =
@@ -632,6 +652,21 @@ void SimpleView::displayImage3(vtkImageData *image)
     this->ui->qvtkWidget_Ori->update();
 }
 
+//using QImage to show original image
+void SimpleView::displayImage3(vtkImageData *image)
+{
+    QImage ori_image(InputFile);
+    MyView *mv = new(std::nothrow) MyView(this);
+    mv->SetImage(ori_image);
+    mv->Display();
+    displayImage(myImage2D.vtkImage());
+}
+
+void SimpleView::updatePixInfo(QString pix_info)
+{
+
+}
+
 void SimpleView::displayImage(vtkImageData *image)
 {
     // Create image actor
@@ -653,7 +688,7 @@ void SimpleView::displayImage(vtkImageData *image)
     this->ui->qvtkWidget_Ori->GetInteractor()->SetInteractorStyle(style);
 
     this->ui->qvtkWidget_Ori->update();
-#if 1   //test
+#if 1   //test from chris, get mouse event and put a pixel on it
     // get double click events
     vtkCallbackCommand *callback = vtkCallbackCommand::New();
     callback->SetCallback(SimpleView::handle_double_click);

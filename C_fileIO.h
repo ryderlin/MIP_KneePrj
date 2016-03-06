@@ -11,6 +11,7 @@ public:
     void readFromOtherOutput(uchar2D::Pointer);
 	void writeImageToFile( const char* dataPath );
 	vtkSmartPointer< vtkRenderer > vtkRender();
+    vtkSmartPointer< vtkImageData> vtkImage();
 //	cv::Mat getMat();
 	uchar2D::Pointer originalImages( );
 	float2D::Pointer castfloat2D();
