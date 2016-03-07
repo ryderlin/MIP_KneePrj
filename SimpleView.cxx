@@ -369,7 +369,9 @@ void SimpleView::slotOpenFile()
     vtkSmartPointer<vtkImageData> vtkimage = vtkImageData::New();
     vtkimage->DeepCopy(flipYFilter->GetOutput());
 
-    this->displayImage3(vtkimage);
+    QImage img(InputFile);
+    this->displayMyView(img);
+    this->displayImage(vtkimage);
 
     reader = NULL;
     connector = NULL;
@@ -486,13 +488,32 @@ void SimpleView::slotTest()
     this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
     this->ui->qvtkWidget_Seg->repaint();
     this->ui->qvtkWidget_Seg->show();
-#if 1//test
+    myImage2D.writeImageToFile("/home/ryderlin/Documents/KneeOut_sobel.bmp");
+    int row, col;
+    QImage inImg("/home/ryderlin/Documents/KneeOut_sobel.bmp");
+    QImage outImg = QImage(inImg.width(), inImg.height(), QImage::Format_ARGB32);
+    for(row = 0; row < outImg.height(); row++)
+    {
+        for (col = 0; col<outImg.width(); col++)
+        {
+            QRgb rgb = inImg.pixel(col, row);
+            if(qRed(rgb) != 0)
+            {
+                outImg.setPixel(col, row, qRgb(255, 0, 0));
+            }
+            else
+            {
+                outImg.setPixel(col, row, qRgb(0, 0, 0));
+            }
+        }
+    }
+    this->displayMyView(outImg);
+#if 0//test code
     // Create an image data
     vtkSmartPointer<vtkImageData> imageData = vtkSmartPointer<vtkImageData>::New();
-//    vtkImageData imageData;
     imageData->DeepCopy(myImage2D.vtkImage());
     int* dims = myImage2D.vtkImage()->GetDimensions();
-    imageData->AllocateScalars(VTK_DOUBLE,3);
+    imageData->AllocateScalars(VTK_DOUBLE,1);
     imageData->SetDimensions(dims);
     // int dims[3]; // can't do this
 
@@ -506,16 +527,22 @@ void SimpleView::slotTest()
         {
             for (int x = 0; x < dims[0]; x++)
             {
-//                int* pixel = static_cast<int*>(imageData->GetScalarPointer(x,y,z));
+                int* pixel = static_cast<int*>(myImage2D.vtkImage()->GetScalarPointer(x,y,z));
 //                if (pixel[0] != 0)
 //                {
-//                    pixel[0] = 255;
-//                    pixel[1] = 0;
-//                    pixel[2] = 0;
+//                    imageData->SetScalarComponentFromDouble(x,y,z,0, 255);
+//                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
+//                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
 //                }
-//                if (myImage2D.vtkImage()->GetScalarComponentAsDouble(x,y,z,0) != 0.0)
+//                if (myImage2D.vtkImage()->getscGetScalarComponentAsDouble(x,y,z,0) != 0.0)
 //                {
 //                    imageData->SetScalarComponentFromDouble(x,y,z,0, 255);
+//                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
+//                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
+//                }
+//                else
+//                {
+//                    imageData->SetScalarComponentFromDouble(x,y,z,0, 0);
 //                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
 //                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
 //                }
@@ -653,13 +680,11 @@ void SimpleView::displayImage2(vtkImageData *image)
 }
 
 //using QImage to show original image
-void SimpleView::displayImage3(vtkImageData *image)
+void SimpleView::displayMyView(QImage img)
 {
-    QImage ori_image(InputFile);
     MyView *mv = new(std::nothrow) MyView(this);
-    mv->SetImage(ori_image);
+    mv->SetImage(img);
     mv->Display();
-    displayImage(myImage2D.vtkImage());
 }
 
 void SimpleView::updatePixInfo(QString pix_info)
