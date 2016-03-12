@@ -283,8 +283,9 @@ public slots:
         int x = ( int )pos.x();
         int y = ( int )pos.y();
         QRgb rgb = this->image.pixel( x, y );
+        this->image.setPixel(x, y, qRgb(0,255,0));
+        this->Display();
         QString info;
-        qGreen(rgb);
         info.sprintf("(%d,%d)=(%d,%d,%d)", x, y, qRed(rgb), qGreen(rgb), qBlue(rgb));
 //        printf("xy = (%d, %d)\n", x, y);
 
