@@ -434,6 +434,16 @@
      <string/>
     </property>
    </widget>
+   <widget class="QLineEdit" name="leTestValue">
+    <property name="geometry">
+     <rect>
+      <x>730</x>
+      <y>30</y>
+      <width>41</width>
+      <height>31</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

@@ -261,7 +261,8 @@ public:
 
     void SetImage(QImage img)
     {
-        this->image = img;
+        this->image = img.convertToFormat(QImage::Format_RGB888);
+//        this->image.convertToFormat(QImage::Format_RGB888);
     }
 
     void Display()
@@ -283,14 +284,21 @@ public slots:
         int x = ( int )pos.x();
         int y = ( int )pos.y();
         QRgb rgb = this->image.pixel( x, y );
-        this->image.setPixel(x, y, qRgb(0,255,0));
+        for (int r = x-2; r < x+3; r++)
+        {
+            for (int c = y-2; c < y+3; c++)
+            {
+                this->image.setPixel(r, c, qRgb(0,255,0));
+            }
+        }
+//        this->image.setPixel(x, y, qRgb(0,255,0));
         this->Display();
         QString info;
         info.sprintf("(%d,%d)=(%d,%d,%d)", x, y, qRed(rgb), qGreen(rgb), qBlue(rgb));
 //        printf("xy = (%d, %d)\n", x, y);
 
         qlPixelInfo->hide();
-        qlPixelInfo->setGeometry(x, y, 300, 30);
+        qlPixelInfo->setGeometry(0, 0, 300, 30);
         qlPixelInfo->setText(info);
         qlPixelInfo->show();
     }
@@ -498,7 +506,7 @@ void SimpleView::slotTest()
         for (col = 0; col<outImg.width(); col++)
         {
             QRgb rgb = inImg.pixel(col, row);
-            if(qRed(rgb) != 0)
+            if(qRed(rgb) > this->ui->leTestValue->text().toInt())
             {
                 outImg.setPixel(col, row, qRgb(255, 0, 0));
             }
@@ -684,6 +692,7 @@ void SimpleView::displayImage2(vtkImageData *image)
 void SimpleView::displayMyView(QImage img)
 {
     MyView *mv = new(std::nothrow) MyView(this);
+    mv->setGeometry(100, 200, 500, 500);
     mv->SetImage(img);
     mv->Display();
 }
