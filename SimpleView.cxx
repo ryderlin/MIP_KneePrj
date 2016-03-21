@@ -26,6 +26,7 @@
 #include "itkGradientAnisotropicDiffusionImageFilter.h"
 #include "itkSobelEdgeDetectionImageFilter.h"
 #include "itkSigmoidImageFilter.h"
+#include "itkAddImageFilter.h"
 //VTK
 #include <vtkAutoInit.h>
 #include <vtkDataObjectToTable.h>
@@ -497,26 +498,28 @@ void SimpleView::slotTest()
     this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
     this->ui->qvtkWidget_Seg->repaint();
     this->ui->qvtkWidget_Seg->show();
-    myImage2D.writeImageToFile("/home/ryderlin/Documents/KneeOut_sobel.bmp");
+    myImage2D.writeImageToFile("KneeOut_sobel.bmp");
     int row, col;
-    QImage inImg("/home/ryderlin/Documents/KneeOut_sobel.bmp");
-    QImage outImg = QImage(inImg.width(), inImg.height(), QImage::Format_ARGB32);
-    for(row = 0; row < outImg.height(); row++)
+    QImage inImg("KneeOut_sobel.bmp");
+    QImage outImg = QImage(InputFile.toLatin1().data());
+    QImage ouImgC = outImg.convertToFormat(QImage::Format_RGB888);
+    for(row = 0; row < ouImgC.height(); row++)
     {
-        for (col = 0; col<outImg.width(); col++)
+        for (col = 0; col<ouImgC.width(); col++)
         {
             QRgb rgb = inImg.pixel(col, row);
             if(qRed(rgb) > this->ui->leTestValue->text().toInt())
             {
-                outImg.setPixel(col, row, qRgb(255, 0, 0));
+                ouImgC.setPixel(col, row, qRgb(255, 0, 0));
             }
             else
             {
-                outImg.setPixel(col, row, qRgb(0, 0, 0));
+//                ouImgC.setPixel(col, row, qRgb(0, 0, 0));
             }
         }
     }
-    this->displayMyView(outImg);
+//    outImg.save("KneeOut_sobel_red.bmp");
+    this->displayMyView(ouImgC);
 #if 0//test code
     // Create an image data
     vtkSmartPointer<vtkImageData> imageData = vtkSmartPointer<vtkImageData>::New();
@@ -565,7 +568,29 @@ void SimpleView::slotTest()
 
 void SimpleView::slotSegmentation()
 {
-#if 1   //temp test for finding an edge from image center to up
+#if 0//test for addimage filter
+    typedef itk::ImageFileReader<ImageType> ReaderType;
+    ReaderType::Pointer reader = ReaderType::New();
+    reader->SetFileName("/home/ryderlin/Documents/001.bmp");
+    reader->Update();
+
+    ReaderType::Pointer reader1 = ReaderType::New();
+    reader1->SetFileName("KneeOut_sobel_red.bmp");
+    reader1->Update();
+    typedef itk::AddImageFilter <ImageType, ImageType >
+      AddImageFilterType;
+
+    AddImageFilterType::Pointer addFilter
+      = AddImageFilterType::New ();
+    addFilter->SetInput1(reader->GetOutput());
+    addFilter->SetInput2(reader1->GetOutput());
+    addFilter->Update();
+      myImage2D.readFromOtherImage(addFilter->GetOutput());
+      this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+      this->ui->qvtkWidget_Seg->repaint();
+      this->ui->qvtkWidget_Seg->show();
+#endif
+#if 0   //temp test for finding an edge from image center to up
     ImageType::Pointer seg_image = myImage2D.originalImages();
     int w = seg_image->GetLargestPossibleRegion().GetSize()[0];
     int h = seg_image->GetLargestPossibleRegion().GetSize()[1];
