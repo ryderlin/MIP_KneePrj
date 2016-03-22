@@ -257,6 +257,7 @@ public:
         this->Parent = parent;
         qlPixelInfo = new QLabel(this);
         qlPixelInfo->setStyleSheet("QLabel { color : red; }");
+        this->PointCount = 0;
     }
 
 
@@ -282,8 +283,13 @@ public slots:
     void mousePressEvent( QMouseEvent* event )
     {
         QPointF pos =  mapToScene( event->pos() );
+        QPainter pt(&image);
+        pt.setPen(Qt::green);
         int x = ( int )pos.x();
         int y = ( int )pos.y();
+        ClickPointX[PointCount] = x;
+        ClickPointY[PointCount] = y;
+        PointCount++;
         QRgb rgb = this->image.pixel( x, y );
         for (int r = x-2; r < x+3; r++)
         {
@@ -292,11 +298,27 @@ public slots:
                 this->image.setPixel(r, c, qRgb(0,255,0));
             }
         }
-//        this->image.setPixel(x, y, qRgb(0,255,0));
+        if (PointCount % 2 == 0)
+        {
+            pt.drawLine(ClickPointX[PointCount-1],ClickPointY[PointCount-1],
+                        ClickPointX[PointCount-2],ClickPointY[PointCount-2] );
+            pt.end();
+            QLabel *qlDistance = new QLabel(this);
+            qlDistance->setStyleSheet("QLabel { color : red; }");
+            qlDistance->setGeometry(0, 0+(PointCount/2)*30, 300, 30);
+            QString line_info;
+            double distance = sqrt(pow(ClickPointX[PointCount-1] - ClickPointX[PointCount-2], 2) +
+                                   pow(ClickPointY[PointCount-1] - ClickPointY[PointCount-2], 2));
+            line_info.sprintf("(%d,%d) to (%d,%d) is %lf",
+                              ClickPointX[PointCount-1],ClickPointY[PointCount-1],
+                              ClickPointX[PointCount-2],ClickPointY[PointCount-2], distance);
+            qlDistance->setText(line_info);
+            qlDistance->show();
+        }
+
         this->Display();
         QString info;
         info.sprintf("(%d,%d)=(%d,%d,%d)", x, y, qRed(rgb), qGreen(rgb), qBlue(rgb));
-//        printf("xy = (%d, %d)\n", x, y);
 
         qlPixelInfo->hide();
         qlPixelInfo->setGeometry(0, 0, 300, 30);
@@ -308,6 +330,9 @@ private:
     QImage image;
     QLabel *qlPixelInfo;
     SimpleView *Parent;
+    int PointCount;
+    //to recording 6 clicked point
+    int ClickPointX[6], ClickPointY[6];
 };
 
 
@@ -495,9 +520,9 @@ void SimpleView::slotTest()
     rescaler->SetOutputMaximum( itk::NumericTraits< unsigned char >::max() );
 
     myImage2D.readFromOtherOutput(rescaler->GetOutput());
-    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    this->ui->qvtkWidget_Seg->repaint();
-    this->ui->qvtkWidget_Seg->show();
+//    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+//    this->ui->qvtkWidget_Seg->repaint();
+//    this->ui->qvtkWidget_Seg->show();
     myImage2D.writeImageToFile("KneeOut_sobel.bmp");
     int row, col;
     QImage inImg("KneeOut_sobel.bmp");
