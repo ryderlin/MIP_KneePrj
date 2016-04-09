@@ -49,8 +49,8 @@ public slots:
   virtual void slotRunAD();
   virtual void slotReset();
   virtual void slotWriteFile();
-  virtual void slotSegmentation();
   virtual void slotTest();
+  virtual void slotSobel();
   virtual void displayImage(vtkImageData *image);
   virtual void displayImage2(vtkImageData *image);
   virtual void displayMyView(QImage img);

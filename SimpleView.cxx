@@ -353,8 +353,8 @@ SimpleView::SimpleView()
     connect(this->ui->btnRunAD, SIGNAL (released()),this, SLOT (slotRunAD()));
     connect(this->ui->btnReset, SIGNAL (released()),this, SLOT (slotReset()));
     connect(this->ui->btnWriteFile, SIGNAL (released()),this, SLOT (slotWriteFile()));
-    connect(this->ui->btnSeg, SIGNAL (released()),this, SLOT (slotSegmentation()));
     connect(this->ui->btnTest, SIGNAL (released()),this, SLOT (slotTest()));
+    connect(this->ui->btnSobel, SIGNAL (released()),this, SLOT (slotSobel()));
     this->ui->qvtkWidget_Ori->repaint();
     this->ui->qvtkWidget_Seg->hide();
 }
@@ -503,7 +503,7 @@ bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexTyp
     return true;
 }
 
-void SimpleView::slotTest()
+void SimpleView::slotSobel()
 {
     //temp for sobel
     typedef itk::Image<float, 2>          FloatImageType;
@@ -591,8 +591,35 @@ void SimpleView::slotTest()
 #endif
 }
 
-void SimpleView::slotSegmentation()
+void SimpleView::slotTest()
 {
+#if 1 //test
+    myImage2D.writeImageToFile("KneeOut_merge.bmp");
+    QImage inImg("KneeOut_merge.bmp");
+    int Original_Image_Height = inImg.height();
+    int Original_Image_Width = inImg.width();
+    float ClassNumber;                                 //the number of classes used by MRF
+    float SelectingClass;                              //how many classes would be merged?  1+2? 1+2+3? 1+2+3+4?...
+    int ThresholdingValue;
+
+
+    ClassNumber = (float)(this->ui->leIterationNum->text().toInt());
+    SelectingClass = (float)(this->ui->leMergedCls->text().toInt());
+    ThresholdingValue = (int)(((255.0 / (ClassNumber - 1.0)) * (SelectingClass - 1.0)) + 2.0);
+    for(int j = 0;j < Original_Image_Height;j++)
+    {
+        for(int i = 0;i < Original_Image_Width;i++)
+            {
+                QRgb rgb = inImg.pixel(i, j);
+                if(qRed(rgb) <= ThresholdingValue)
+                    inImg.setPixel(i, j, 255);
+                else
+                    inImg.setPixel(i, j, 0);
+            }
+    }
+    this->displayMyView(inImg);
+    inImg.save("KneeOut_merge.bmp");
+#endif
 #if 0//test for addimage filter
     typedef itk::ImageFileReader<ImageType> ReaderType;
     ReaderType::Pointer reader = ReaderType::New();
