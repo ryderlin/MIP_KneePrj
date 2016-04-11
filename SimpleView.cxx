@@ -505,6 +505,7 @@ bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexTyp
 
 void SimpleView::slotSobel()
 {
+    myImage2D.readFiletoImages("KneeOut_merge.bmp");
     //temp for sobel
     typedef itk::Image<float, 2>          FloatImageType;
     typedef itk::SobelEdgeDetectionImageFilter <ImageType, FloatImageType>
