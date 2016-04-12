@@ -68,6 +68,7 @@
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
+using namespace std;
 // Template for image value reading
 template<typename T>
 void vtkValueMessageTemplate(vtkImageData* image, int* position,
@@ -373,10 +374,73 @@ void SimpleView::slotOpenFile()
 
 #if 0 //for testing use
 #else
+    // get DICOM info
+    typedef itk::GDCMImageIO ImageIOType;
+    ImageIOType::Pointer gdcmIO = ImageIOType::New();
+
     typedef itk::ImageFileReader<ImageType> ReaderType;
     ReaderType::Pointer reader = ReaderType::New();
     reader->SetFileName(InputFile.toLatin1().data());
+    reader->SetImageIO(gdcmIO);
     reader->Update();
+
+    /***** get DICOM tag value *****/
+    QString dicomTagValue;
+    int height, width;
+    //int maxPixelValue, minPixelValue;
+    int winCenter, winWidth;
+    double pixelSpacing_row, pixelSpacing_col;
+
+    height = (getDICOMtagValue(gdcmIO, "0028|0010")).toInt(); //height
+    width = (getDICOMtagValue(gdcmIO, "0028|0011")).toInt(); //width
+    //maxPixelValue = stoi(getDICOMtagValue(gdcmIO, "0028|0107")); //not found
+    //minPixelValue = stoi(getDICOMtagValue(gdcmIO, "0028|0106")); //not found
+    winCenter = (getDICOMtagValue(gdcmIO, "0028|1050")).toInt(); //window center
+    winWidth = (getDICOMtagValue(gdcmIO, "0028|1051")).toInt(); //window width
+    // pixelSpacing
+    dicomTagValue = getDICOMtagValue(gdcmIO, "0018|1164") + ".";
+//    pixelSpacing_row = (dicomTagValue.substr(0, dicomTagValue.find("\\")));
+//    pixelSpacing_col = (dicomTagValue.substr(dicomTagValue.find("\\")+1, dicomTagValue.find(".")-dicomTagValue.find("\\")-1));
+
+    /***** Normalize DICOM pixel value (0~255) *****/
+    ImageType::IndexType start;
+    start[0] = 0;
+    start[1] = 0;
+
+    ImageType::SizeType size;
+    size[0] = width;
+    size[1] = height;
+
+    // Pixel data is allocated
+    ImageType::RegionType region;
+    region.SetSize(size);
+    region.SetIndex(start);
+
+    ImageType::Pointer image = reader->GetOutput();
+    image->SetRegions(region);
+    image->Allocate();
+
+    int outMin=0, outMax=255; // Normalize to 0~255
+    ImageType::IndexType pixelIndex;
+    for (int j=0; j<height; j++) {
+        for (int i=0; i<width; i++) {
+            pixelIndex[0] = i;
+            pixelIndex[1] = j;
+            ImageType::PixelType pixelVal;
+            pixelVal = image->GetPixel(pixelIndex); // origin value
+            // Normalization
+            if (pixelVal <= winCenter - 0.5 - (winWidth-1)/2) {
+                pixelVal = outMin;
+            }
+            else if (pixelVal > winCenter - 0.5 + (winWidth-1)/2) {
+                pixelVal = outMax;
+            }
+            else {
+                pixelVal = ((pixelVal - (winCenter - 0.5)) / (winWidth-1) + 0.5) * (outMax - outMin )+ outMin;
+            }
+            image->SetPixel(pixelIndex, pixelVal); // normalized value
+        }
+    }
 
     myImage2D.readFromOtherOutput(reader->GetOutput());
 #endif
@@ -883,3 +947,22 @@ void SimpleView::handle_double_click(vtkObject* obj, unsigned long event, void* 
     self->ui->qvtkWidget_Ori->update();
 }
 
+QString SimpleView::getDICOMtagValue(itk::GDCMImageIO::Pointer gdcmIO, QString tagkey) {
+    string labelId;
+    if( itk::GDCMImageIO::GetLabelFromTag( tagkey.toStdString(), labelId ) ) {
+        string value;
+        cout << labelId << " (" << tagkey.toStdString() << "): ";
+        if( gdcmIO->GetValueFromTag(tagkey.toStdString(), value) ) {
+            cout << value << endl;
+        }
+        else {
+            cout << "(No Value Found in File)" << endl;
+        }
+        QString ret_value = QString::fromStdString(value);
+        return ret_value;
+    }
+    else {
+        cerr << "Trying to access inexistant DICOM tag." << endl;
+        return "";
+    }
+}

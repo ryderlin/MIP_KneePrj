@@ -63,6 +63,7 @@ private:
 
   static void handle_double_click(vtkObject* obj, unsigned long event, void* ClientData, void* CallData);
   bool up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexType pixelIndex, short pixel_value);
+  QString getDICOMtagValue(itk::GDCMImageIO::Pointer gdcmIO, QString tagkey);
   vtkSmartPointer<vtkQtTableView> TableView;
   //vtkImageViewer2 *viewer;
 
