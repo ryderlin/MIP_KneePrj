@@ -23,6 +23,7 @@
 #include "itkImageFileWriter.h"
 #include "itkGDCMImageIO.h"
 #include "itkBMPImageIOFactory.h"
+#include "itkJPEGImageIOFactory.h"
 #include "itkGradientAnisotropicDiffusionImageFilter.h"
 #include "itkSobelEdgeDetectionImageFilter.h"
 #include "itkSigmoidImageFilter.h"
@@ -370,6 +371,7 @@ SimpleView::~SimpleView()
 void SimpleView::slotOpenFile()
 {
     itk::BMPImageIOFactory::RegisterOneFactory();
+    itk::JPEGImageIOFactory::RegisterOneFactory();
     InputFile = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath());
 
 #if 0 //for testing use
@@ -377,11 +379,14 @@ void SimpleView::slotOpenFile()
     // get DICOM info
     typedef itk::GDCMImageIO ImageIOType;
     ImageIOType::Pointer gdcmIO = ImageIOType::New();
+    gdcmIO->UseCompressionOn();
+    gdcmIO->SetCompressionType(itk::GDCMImageIO::JPEG);
+    gdcmIO->UseCompressionOff();
 
     typedef itk::ImageFileReader<ImageType> ReaderType;
     ReaderType::Pointer reader = ReaderType::New();
     reader->SetFileName(InputFile.toLatin1().data());
-    reader->SetImageIO(gdcmIO);
+//    reader->SetImageIO(gdcmIO);
     reader->Update();
 
     /***** get DICOM tag value *****/
@@ -402,6 +407,7 @@ void SimpleView::slotOpenFile()
 //    pixelSpacing_row = (dicomTagValue.substr(0, dicomTagValue.find("\\")));
 //    pixelSpacing_col = (dicomTagValue.substr(dicomTagValue.find("\\")+1, dicomTagValue.find(".")-dicomTagValue.find("\\")-1));
 
+#if 0 //Normalize
     /***** Normalize DICOM pixel value (0~255) *****/
     ImageType::IndexType start;
     start[0] = 0;
@@ -441,8 +447,9 @@ void SimpleView::slotOpenFile()
             image->SetPixel(pixelIndex, pixelVal); // normalized value
         }
     }
-
+#endif
     myImage2D.readFromOtherOutput(reader->GetOutput());
+    myImage2D.writeImageToFile("dicom_test.jpg");
 #endif
     /***** 變數設定 *****/
     // image is grayscale
