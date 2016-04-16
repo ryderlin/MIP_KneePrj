@@ -22,6 +22,17 @@ typedef itk::Image<RGBPixelType,2> ImageType;
 #else
 typedef itk::Image<unsigned char,2> ImageType;
 #endif
+typedef itk::ImageFileReader<ImageType> ReaderType;
+typedef itk::ImageFileWriter<ImageType> WriterType;
+
+/*for MyView using*/
+typedef enum
+{
+    None,
+    CalculateDistance,
+    RegionGrowing
+}ViewMode;
+
 // Forward Qt class declarations
 class Ui_SimpleView;
 
@@ -53,7 +64,7 @@ public slots:
   virtual void slotSobel();
   virtual void displayImage(vtkImageData *image);
   virtual void displayImage2(vtkImageData *image);
-  virtual void displayMyView(QImage img);
+  virtual void displayMyView(QImage img, ViewMode view_mode);
   virtual void updatePixInfo(QString pix_info);
 protected:
 

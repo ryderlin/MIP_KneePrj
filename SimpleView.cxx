@@ -28,6 +28,10 @@
 #include "itkSobelEdgeDetectionImageFilter.h"
 #include "itkSigmoidImageFilter.h"
 #include "itkAddImageFilter.h"
+#include "itkRegionGrowImageFilter.h"
+//#include "itkKLMRegionGrowImageFilter.h"
+#include "itkConnectedThresholdImageFilter.h"
+//#include "itkNeighborhoodConnectedImageFilter.h"
 //VTK
 #include <vtkAutoInit.h>
 #include <vtkDataObjectToTable.h>
@@ -67,188 +71,189 @@
 #include "vtkSmartPointer.h"
 #include "C_itkSeg.h"
 #define VTK_CREATE(type, name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
+    vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 using namespace std;
+
 // Template for image value reading
 template<typename T>
 void vtkValueMessageTemplate(vtkImageData* image, int* position,
                              std::string& message)
 {
-  T* tuple = ((T*)image->GetScalarPointer(position));
-  int components = image->GetNumberOfScalarComponents();
-  for (int c = 0; c < components; ++c)
+    T* tuple = ((T*)image->GetScalarPointer(position));
+    int components = image->GetNumberOfScalarComponents();
+    for (int c = 0; c < components; ++c)
     {
-    message += vtkVariant(tuple[c]).ToString();
-    if (c != (components - 1))
-      {
-      message += ", ";
-      }
+        message += vtkVariant(tuple[c]).ToString();
+        if (c != (components - 1))
+        {
+            message += ", ";
+        }
     }
-  message += " )";
+    message += " )";
 }
 
 // The mouse motion callback, to pick the image and recover pixel values
 class vtkImageInteractionCallback : public vtkCommand
 {
 public:
-  static vtkImageInteractionCallback *New()
+    static vtkImageInteractionCallback *New()
     {
-    return new vtkImageInteractionCallback;
+        return new vtkImageInteractionCallback;
     }
 
-  vtkImageInteractionCallback()
+    vtkImageInteractionCallback()
     {
-    this->Viewer     = NULL;
-    this->Picker     = NULL;
-    this->Annotation = NULL;
+        this->Viewer     = NULL;
+        this->Picker     = NULL;
+        this->Annotation = NULL;
     }
 
-  ~vtkImageInteractionCallback()
+    ~vtkImageInteractionCallback()
     {
-    this->Viewer     = NULL;
-    this->Picker     = NULL;
-    this->Annotation = NULL;
+        this->Viewer     = NULL;
+        this->Picker     = NULL;
+        this->Annotation = NULL;
     }
 
-  void SetPicker(vtkPropPicker *picker)
+    void SetPicker(vtkPropPicker *picker)
     {
-    this->Picker = picker;
+        this->Picker = picker;
     }
 
-  void SetAnnotation(vtkCornerAnnotation *annotation)
+    void SetAnnotation(vtkCornerAnnotation *annotation)
     {
-    this->Annotation = annotation;
+        this->Annotation = annotation;
     }
 
-  void SetViewer(vtkImageViewer2 *viewer)
+    void SetViewer(vtkImageViewer2 *viewer)
     {
-    this->Viewer = viewer;
+        this->Viewer = viewer;
     }
 
-  void SetViewer2(QVTKWidget *qvtkw)
-  {
-      this->qvtkw = qvtkw;
-  }
-
-  void SetActor(vtkImageActor* actor)
-  {
-      this->Actor = actor;
-  }
-
-  virtual void Execute(vtkObject *, unsigned long vtkNotUsed(event), void *)
+    void SetViewer2(QVTKWidget *qvtkw)
     {
-//    vtkRenderWindowInteractor *interactor = this->Viewer->GetRenderWindow()->GetInteractor();
-//      vtkRenderer* renderer = this->Viewer->GetRenderer();
-//      vtkImageActor* actor = this->Viewer->GetImageActor();
-//      vtkImageData* image = this->Viewer->GetInput();
-//      vtkInteractorStyle *style = vtkInteractorStyle::SafeDownCast(
-//        interactor->GetInteractorStyle());
-    vtkRenderWindowInteractor *interactor = this->qvtkw->GetRenderWindow()->GetInteractor();
-    vtkRenderer* renderer = this->qvtkw->GetRenderWindow()->GetRenderers()->GetFirstRenderer();
-    vtkImageActor* actor = this->Actor;//(vtkImageActor*)(renderer->GetActors()->GetLastActor());
-    vtkImageData* image = actor->GetInput();
-    vtkInteractorStyle *style = vtkInteractorStyle::SafeDownCast(
-      interactor->GetInteractorStyle());
+        this->qvtkw = qvtkw;
+    }
+
+    void SetActor(vtkImageActor* actor)
+    {
+        this->Actor = actor;
+    }
+
+    virtual void Execute(vtkObject *, unsigned long vtkNotUsed(event), void *)
+    {
+        //    vtkRenderWindowInteractor *interactor = this->Viewer->GetRenderWindow()->GetInteractor();
+        //      vtkRenderer* renderer = this->Viewer->GetRenderer();
+        //      vtkImageActor* actor = this->Viewer->GetImageActor();
+        //      vtkImageData* image = this->Viewer->GetInput();
+        //      vtkInteractorStyle *style = vtkInteractorStyle::SafeDownCast(
+        //        interactor->GetInteractorStyle());
+        vtkRenderWindowInteractor *interactor = this->qvtkw->GetRenderWindow()->GetInteractor();
+        vtkRenderer* renderer = this->qvtkw->GetRenderWindow()->GetRenderers()->GetFirstRenderer();
+        vtkImageActor* actor = this->Actor;//(vtkImageActor*)(renderer->GetActors()->GetLastActor());
+        vtkImageData* image = actor->GetInput();
+        vtkInteractorStyle *style = vtkInteractorStyle::SafeDownCast(
+                    interactor->GetInteractorStyle());
 
 #if VTK_MAJOR_VERSION <= 5
-    image->Update();
+        image->Update();
 #endif
 
-    // Pick at the mouse location provided by the interactor
-    this->Picker->Pick(interactor->GetEventPosition()[0],
-                       interactor->GetEventPosition()[1],
-                       0.0, renderer);
+        // Pick at the mouse location provided by the interactor
+        this->Picker->Pick(interactor->GetEventPosition()[0],
+                interactor->GetEventPosition()[1],
+                0.0, renderer);
 
-    // There could be other props assigned to this picker, so
-    // make sure we picked the image actor
-    vtkAssemblyPath* path = this->Picker->GetPath();
-    bool validPick = false;
+        // There could be other props assigned to this picker, so
+        // make sure we picked the image actor
+        vtkAssemblyPath* path = this->Picker->GetPath();
+        bool validPick = false;
 
-    if (path)
-      {
-      vtkCollectionSimpleIterator sit;
-      path->InitTraversal(sit);
-      vtkAssemblyNode *node;
-      for (int i = 0; i < path->GetNumberOfItems() && !validPick; ++i)
+        if (path)
         {
-        node = path->GetNextNode(sit);
-        if (actor == vtkImageActor::SafeDownCast(node->GetViewProp()))
-          {
-          validPick = true;
-          }
+            vtkCollectionSimpleIterator sit;
+            path->InitTraversal(sit);
+            vtkAssemblyNode *node;
+            for (int i = 0; i < path->GetNumberOfItems() && !validPick; ++i)
+            {
+                node = path->GetNextNode(sit);
+                if (actor == vtkImageActor::SafeDownCast(node->GetViewProp()))
+                {
+                    validPick = true;
+                }
+            }
         }
-      }
 
-    if (!validPick)
-      {
-      this->Annotation->SetText(0, "Off Image");
-      interactor->Render();
-      // Pass the event further on
-      style->OnMouseMove();
-      return;
-      }
+        if (!validPick)
+        {
+            this->Annotation->SetText(0, "Off Image");
+            interactor->Render();
+            // Pass the event further on
+            style->OnMouseMove();
+            return;
+        }
 
-    // Get the world coordinates of the pick
-    double pos[3];
-    this->Picker->GetPickPosition(pos);
+        // Get the world coordinates of the pick
+        double pos[3];
+        this->Picker->GetPickPosition(pos);
 
-    int image_coordinate[3];
-    image_coordinate[0] = vtkMath::Round(pos[0]);
-    image_coordinate[1] = vtkMath::Round(pos[1]);
-    image_coordinate[2] = 0;
+        int image_coordinate[3];
+        image_coordinate[0] = vtkMath::Round(pos[0]);
+        image_coordinate[1] = vtkMath::Round(pos[1]);
+        image_coordinate[2] = 0;
 
-//    int axis = this->Viewer->GetSliceOrientation();
-//    switch (axis)
-//      {
-//      case vtkImageViewer2::SLICE_ORIENTATION_XZ:
-//        image_coordinate[0] = vtkMath::Round(pos[0]);
-//        image_coordinate[1] = this->Viewer->GetSlice();
-//        image_coordinate[2] = vtkMath::Round(pos[2]);
-//        break;
-//      case vtkImageViewer2::SLICE_ORIENTATION_YZ:
-//        image_coordinate[0] = this->Viewer->GetSlice();
-//        image_coordinate[1] = vtkMath::Round(pos[0]);
-//        image_coordinate[2] = vtkMath::Round(pos[1]);
-//        break;
-//      default:  // vtkImageViewer2::SLICE_ORIENTATION_XY
-//        image_coordinate[0] = vtkMath::Round(pos[0]);
-//        image_coordinate[1] = vtkMath::Round(pos[1]);
-//        image_coordinate[2] = this->Viewer->GetSlice();
-//        break;
-//      }
+        //    int axis = this->Viewer->GetSliceOrientation();
+        //    switch (axis)
+        //      {
+        //      case vtkImageViewer2::SLICE_ORIENTATION_XZ:
+        //        image_coordinate[0] = vtkMath::Round(pos[0]);
+        //        image_coordinate[1] = this->Viewer->GetSlice();
+        //        image_coordinate[2] = vtkMath::Round(pos[2]);
+        //        break;
+        //      case vtkImageViewer2::SLICE_ORIENTATION_YZ:
+        //        image_coordinate[0] = this->Viewer->GetSlice();
+        //        image_coordinate[1] = vtkMath::Round(pos[0]);
+        //        image_coordinate[2] = vtkMath::Round(pos[1]);
+        //        break;
+        //      default:  // vtkImageViewer2::SLICE_ORIENTATION_XY
+        //        image_coordinate[0] = vtkMath::Round(pos[0]);
+        //        image_coordinate[1] = vtkMath::Round(pos[1]);
+        //        image_coordinate[2] = this->Viewer->GetSlice();
+        //        break;
+        //      }
 
-    std::string message = "Location: ( ";
-    message += vtkVariant(image_coordinate[0]).ToString();
-    message += ", ";
-    message += vtkVariant(image_coordinate[1]).ToString();
-    message += ", ";
-    message += vtkVariant(image_coordinate[2]).ToString();
-    message += " )\nValue: ( ";
+        std::string message = "Location: ( ";
+        message += vtkVariant(image_coordinate[0]).ToString();
+        message += ", ";
+        message += vtkVariant(image_coordinate[1]).ToString();
+        message += ", ";
+        message += vtkVariant(image_coordinate[2]).ToString();
+        message += " )\nValue: ( ";
 
-    switch (image->GetScalarType())
-      {
-      vtkTemplateMacro((vtkValueMessageTemplate<VTK_TT>(image,
-                                                        image_coordinate,
-                                                        message)));
+        switch (image->GetScalarType())
+        {
+        vtkTemplateMacro((vtkValueMessageTemplate<VTK_TT>(image,
+                                                          image_coordinate,
+                                                          message)));
 
-      default:
-        return;
-      }
+        default:
+            return;
+        }
 
-    this->Annotation->SetText( 0, message.c_str() );
-    printf("gogogogo!!!\n");
-    printf("%s\n", message.c_str());
-    interactor->Render();
-    style->OnMouseMove();
+        this->Annotation->SetText( 0, message.c_str() );
+        printf("gogogogo!!!\n");
+        printf("%s\n", message.c_str());
+        interactor->Render();
+        style->OnMouseMove();
     }
 
 private:
-  vtkImageViewer2*      Viewer;      // Pointer to the viewer
-  vtkPropPicker*        Picker;      // Pointer to the picker
-  vtkCornerAnnotation*  Annotation;  // Pointer to the annotation
-  QVTKWidget*           qvtkw;
-  vtkImageActor*        Actor;
+    vtkImageViewer2*      Viewer;      // Pointer to the viewer
+    vtkPropPicker*        Picker;      // Pointer to the picker
+    vtkCornerAnnotation*  Annotation;  // Pointer to the annotation
+    QVTKWidget*           qvtkw;
+    vtkImageActor*        Actor;
 };
 
 class MyView:public QGraphicsView
@@ -262,58 +267,56 @@ public:
         this->PointCount = 0;
     }
 
-
     void SetImage(QImage img)
     {
-        this->image = img.convertToFormat(QImage::Format_RGB888);
-//        this->image.convertToFormat(QImage::Format_RGB888);
+        this->Qimage = img.convertToFormat(QImage::Format_RGB888);
     }
 
     void Display()
     {
         setScene( new QGraphicsScene( this ) );
-        this->scene()->addPixmap(QPixmap::fromImage(this->image)); // this->image is a QImage
+        this->scene()->addPixmap(QPixmap::fromImage(this->Qimage)); // this->image is a QImage
         this->show();
     }
 
-    void showPixelInfo(QLabel *ql)
+    void setViewMode(ViewMode mode)
     {
-
+        this->Mode = mode;
     }
 
 public slots:
     void mousePressEvent( QMouseEvent* event )
     {
         QPointF pos =  mapToScene( event->pos() );
-        QPainter pt(&image);
-        pt.setPen(Qt::green);
         int x = ( int )pos.x();
         int y = ( int )pos.y();
         ClickPointX[PointCount] = x;
         ClickPointY[PointCount] = y;
         PointCount++;
-        QRgb rgb = this->image.pixel( x, y );
+        QRgb rgb = this->Qimage.pixel( x, y );
         for (int r = x-2; r < x+3; r++)
         {
             for (int c = y-2; c < y+3; c++)
             {
-                this->image.setPixel(r, c, qRgb(0,255,0));
+                this->Qimage.setPixel(r, c, qRgb(0,255,0));
             }
         }
-        if (PointCount % 2 == 0)
+        if (this->Mode == CalculateDistance && PointCount % 2 == 0)
         {
+            QPainter pt(&Qimage);
+            pt.setPen(Qt::green);
             pt.drawLine(ClickPointX[PointCount-1],ClickPointY[PointCount-1],
-                        ClickPointX[PointCount-2],ClickPointY[PointCount-2] );
+                    ClickPointX[PointCount-2],ClickPointY[PointCount-2] );
             pt.end();
             QLabel *qlDistance = new QLabel(this);
             qlDistance->setStyleSheet("QLabel { color : red; }");
             qlDistance->setGeometry(0, 0+(PointCount/2)*30, 300, 30);
             QString line_info;
             double distance = sqrt(pow(ClickPointX[PointCount-1] - ClickPointX[PointCount-2], 2) +
-                                   pow(ClickPointY[PointCount-1] - ClickPointY[PointCount-2], 2));
+                    pow(ClickPointY[PointCount-1] - ClickPointY[PointCount-2], 2));
             line_info.sprintf("(%d,%d) to (%d,%d) is %lf",
                               ClickPointX[PointCount-1],ClickPointY[PointCount-1],
-                              ClickPointX[PointCount-2],ClickPointY[PointCount-2], distance);
+                    ClickPointX[PointCount-2],ClickPointY[PointCount-2], distance);
             qlDistance->setText(line_info);
             qlDistance->show();
         }
@@ -326,15 +329,50 @@ public slots:
         qlPixelInfo->setGeometry(0, 0, 300, 30);
         qlPixelInfo->setText(info);
         qlPixelInfo->show();
+        if (this->Mode == RegionGrowing)
+        {
+            this->Qimage.save("region_growing.bmp");
+            region_growing("region_growing.bmp", x, y);
+        }
+    }
+
+private slots:
+    QImage region_growing(QString image_file, int seed_x, int seed_y)
+    {
+        ITKImageReader = ReaderType::New();
+        ITKImageReader->SetFileName(image_file.toLatin1().data());
+        typedef itk::ConnectedThresholdImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
+        RegionGrowImageFilterType::Pointer regionGrow = RegionGrowImageFilterType::New();
+        float lower = 0.0;
+        float upper = 50.0;
+        regionGrow->SetLower(lower);
+        regionGrow->SetUpper(upper);
+
+        regionGrow->SetReplaceValue(150);
+
+        // Seed 1: (25, 35)
+        ImageType::IndexType seed1;
+        seed1[0] = seed_x;
+        seed1[1] = seed_y;
+        regionGrow->SetSeed(seed1);
+        regionGrow->SetInput(ITKImageReader->GetOutput());
+        regionGrow->Update();
+        ITKImageWriter = WriterType::New();
+        ITKImageWriter->SetFileName("region_growing1.bmp");
+        ITKImageWriter->SetInput(regionGrow->GetOutput());
+        ITKImageWriter->Update();
     }
 
 private:
-    QImage image;
+    QImage Qimage;
+    ReaderType::Pointer ITKImageReader;
+    WriterType::Pointer ITKImageWriter;
     QLabel *qlPixelInfo;
     SimpleView *Parent;
     int PointCount;
     //to recording 6 clicked point
     int ClickPointX[6], ClickPointY[6];
+    ViewMode Mode;
 };
 
 
@@ -343,7 +381,7 @@ SimpleView::SimpleView()
 {
     VTK_MODULE_INIT(vtkRenderingOpenGL);
     VTK_MODULE_INIT(vtkInteractionStyle);
-//    VTK_MODULE_INIT(vtkRenderingWindow);sfdfs
+    //    VTK_MODULE_INIT(vtkRenderingWindow);sfdfs
     this->ui = new Ui_SimpleView;
     this->ui->setupUi(this);
 
@@ -363,8 +401,8 @@ SimpleView::SimpleView()
 
 SimpleView::~SimpleView()
 {
-  // The smart pointers should clean up for up
-  delete ui;
+    // The smart pointers should clean up for up
+    delete ui;
 }
 
 // Action to be taken upon file open
@@ -383,10 +421,9 @@ void SimpleView::slotOpenFile()
     gdcmIO->SetCompressionType(itk::GDCMImageIO::JPEG);
     gdcmIO->UseCompressionOff();
 
-    typedef itk::ImageFileReader<ImageType> ReaderType;
     ReaderType::Pointer reader = ReaderType::New();
     reader->SetFileName(InputFile.toLatin1().data());
-//    reader->SetImageIO(gdcmIO);
+    //    reader->SetImageIO(gdcmIO);
     reader->Update();
 
     /***** get DICOM tag value *****/
@@ -404,8 +441,8 @@ void SimpleView::slotOpenFile()
     winWidth = (getDICOMtagValue(gdcmIO, "0028|1051")).toInt(); //window width
     // pixelSpacing
     dicomTagValue = getDICOMtagValue(gdcmIO, "0018|1164") + ".";
-//    pixelSpacing_row = (dicomTagValue.substr(0, dicomTagValue.find("\\")));
-//    pixelSpacing_col = (dicomTagValue.substr(dicomTagValue.find("\\")+1, dicomTagValue.find(".")-dicomTagValue.find("\\")-1));
+    //    pixelSpacing_row = (dicomTagValue.substr(0, dicomTagValue.find("\\")));
+    //    pixelSpacing_col = (dicomTagValue.substr(dicomTagValue.find("\\")+1, dicomTagValue.find(".")-dicomTagValue.find("\\")-1));
 
 #if 0 //Normalize
     /***** Normalize DICOM pixel value (0~255) *****/
@@ -453,11 +490,10 @@ void SimpleView::slotOpenFile()
 #endif
     /***** 變數設定 *****/
     // image is grayscale
-//    typedef itk::Image<unsigned short,2> ImageType; //要用unsigned short以上型態，dicom pixel value才不會爆掉
+    //    typedef itk::Image<unsigned short,2> ImageType; //要用unsigned short以上型態，dicom pixel value才不會爆掉
     //typedef itk::Image<signed int,2> ImageType;
     // image is RGB
 
-    //typedef itk::ImageFileWriter<ImageType> WriterType;
     typedef itk::ImageToVTKImageFilter<ImageType> ConnectorType;
 
 
@@ -476,7 +512,7 @@ void SimpleView::slotOpenFile()
     vtkimage->DeepCopy(flipYFilter->GetOutput());
 
     QImage img(InputFile);
-    this->displayMyView(img);
+    this->displayMyView(img, RegionGrowing);
     this->displayImage(vtkimage);
 
     reader = NULL;
@@ -506,7 +542,7 @@ void SimpleView::slotRunAD()
     typedef float                                     OutputPixelType;
     typedef itk::Image< OutputPixelType, 2 >  OutputImageType;
     typedef itk::GradientAnisotropicDiffusionImageFilter< InputImageType,
-    OutputImageType > FilterType;
+            OutputImageType > FilterType;
     FilterType::Pointer filter = FilterType::New();
     filter->SetInput( myImage2D.originalImages());
     filter->SetNumberOfIterations(this->ui->leAD_Iteration->text().toDouble());
@@ -533,9 +569,9 @@ void SimpleView::slotRunSig()
     double alpha = this->ui->leSigAlpha->text().toDouble();
     double beta = this->ui->leSigBeta->text().toDouble();
     typedef itk::SigmoidImageFilter <ImageType, ImageType>
-      SigmoidImageFilterType;
+            SigmoidImageFilterType;
     SigmoidImageFilterType::Pointer sigmoidFilter
-      = SigmoidImageFilterType::New();
+            = SigmoidImageFilterType::New();
     sigmoidFilter->SetInput(myImage2D.originalImages());
     sigmoidFilter->SetOutputMinimum(0);
     sigmoidFilter->SetOutputMaximum(itk::NumericTraits< signed short >::max());
@@ -592,9 +628,9 @@ void SimpleView::slotSobel()
     rescaler->SetOutputMaximum( itk::NumericTraits< unsigned char >::max() );
 
     myImage2D.readFromOtherOutput(rescaler->GetOutput());
-//    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-//    this->ui->qvtkWidget_Seg->repaint();
-//    this->ui->qvtkWidget_Seg->show();
+    //    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+    //    this->ui->qvtkWidget_Seg->repaint();
+    //    this->ui->qvtkWidget_Seg->show();
     myImage2D.writeImageToFile("KneeOut_sobel.bmp");
     int row, col;
     QImage inImg("KneeOut_sobel.bmp");
@@ -611,12 +647,12 @@ void SimpleView::slotSobel()
             }
             else
             {
-//                ouImgC.setPixel(col, row, qRgb(0, 0, 0));
+                //                ouImgC.setPixel(col, row, qRgb(0, 0, 0));
             }
         }
     }
-//    outImg.save("KneeOut_sobel_red.bmp");
-    this->displayMyView(ouImgC);
+    //    outImg.save("KneeOut_sobel_red.bmp");
+    this->displayMyView(ouImgC, RegionGrowing);
 #if 0//test code
     // Create an image data
     vtkSmartPointer<vtkImageData> imageData = vtkSmartPointer<vtkImageData>::New();
@@ -637,24 +673,24 @@ void SimpleView::slotSobel()
             for (int x = 0; x < dims[0]; x++)
             {
                 int* pixel = static_cast<int*>(myImage2D.vtkImage()->GetScalarPointer(x,y,z));
-//                if (pixel[0] != 0)
-//                {
-//                    imageData->SetScalarComponentFromDouble(x,y,z,0, 255);
-//                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
-//                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
-//                }
-//                if (myImage2D.vtkImage()->getscGetScalarComponentAsDouble(x,y,z,0) != 0.0)
-//                {
-//                    imageData->SetScalarComponentFromDouble(x,y,z,0, 255);
-//                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
-//                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
-//                }
-//                else
-//                {
-//                    imageData->SetScalarComponentFromDouble(x,y,z,0, 0);
-//                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
-//                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
-//                }
+                //                if (pixel[0] != 0)
+                //                {
+                //                    imageData->SetScalarComponentFromDouble(x,y,z,0, 255);
+                //                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
+                //                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
+                //                }
+                //                if (myImage2D.vtkImage()->getscGetScalarComponentAsDouble(x,y,z,0) != 0.0)
+                //                {
+                //                    imageData->SetScalarComponentFromDouble(x,y,z,0, 255);
+                //                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
+                //                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
+                //                }
+                //                else
+                //                {
+                //                    imageData->SetScalarComponentFromDouble(x,y,z,0, 0);
+                //                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
+                //                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
+                //                }
             }
         }
     }
@@ -681,15 +717,15 @@ void SimpleView::slotTest()
     for(int j = 0;j < Original_Image_Height;j++)
     {
         for(int i = 0;i < Original_Image_Width;i++)
-            {
-                QRgb rgb = inImg.pixel(i, j);
-                if(qRed(rgb) <= ThresholdingValue)
-                    inImg.setPixel(i, j, 255);
-                else
-                    inImg.setPixel(i, j, 0);
-            }
+        {
+            QRgb rgb = inImg.pixel(i, j);
+            if(qRed(rgb) <= ThresholdingValue)
+                inImg.setPixel(i, j, 0);
+            else
+                inImg.setPixel(i, j, 255);
+        }
     }
-    this->displayMyView(inImg);
+    this->displayMyView(inImg, RegionGrowing);
     inImg.save("KneeOut_merge.bmp");
 #endif
 #if 0//test for addimage filter
@@ -702,17 +738,17 @@ void SimpleView::slotTest()
     reader1->SetFileName("KneeOut_sobel_red.bmp");
     reader1->Update();
     typedef itk::AddImageFilter <ImageType, ImageType >
-      AddImageFilterType;
+            AddImageFilterType;
 
     AddImageFilterType::Pointer addFilter
-      = AddImageFilterType::New ();
+            = AddImageFilterType::New ();
     addFilter->SetInput1(reader->GetOutput());
     addFilter->SetInput2(reader1->GetOutput());
     addFilter->Update();
-      myImage2D.readFromOtherImage(addFilter->GetOutput());
-      this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-      this->ui->qvtkWidget_Seg->repaint();
-      this->ui->qvtkWidget_Seg->show();
+    myImage2D.readFromOtherImage(addFilter->GetOutput());
+    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+    this->ui->qvtkWidget_Seg->repaint();
+    this->ui->qvtkWidget_Seg->show();
 #endif
 #if 0   //temp test for finding an edge from image center to up
     ImageType::Pointer seg_image = myImage2D.originalImages();
@@ -721,12 +757,12 @@ void SimpleView::slotTest()
     ImageType::IndexType pixelIndex;
     signed short pixel_value;
     bool b1 = false;
-//    int paint_cnt = 0;
+    //    int paint_cnt = 0;
 
     std::cout << "size is " << w << " x " << h << endl;
     for (int x = 200; x < w; x++)
     {
-//        paint_cnt = 0;
+        //        paint_cnt = 0;
         for (int y = h/2; y > 0; y--)
         {
             pixelIndex[0] = x;
@@ -748,33 +784,33 @@ void SimpleView::slotTest()
             }
         }
     }
-//    for (int x = 0; x < w; x++)
-//    {
-//        pixelIndex[0] = x;
-//        pixelIndex[1] = h/5;
-//        seg_image->SetPixel(pixelIndex, 255);
-//    }
+    //    for (int x = 0; x < w; x++)
+    //    {
+    //        pixelIndex[0] = x;
+    //        pixelIndex[1] = h/5;
+    //        seg_image->SetPixel(pixelIndex, 255);
+    //    }
     myImage2D.readFromOtherImage(seg_image);
     this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
     this->ui->qvtkWidget_Seg->repaint();
     this->ui->qvtkWidget_Seg->show();
-//    ImageType::IndexType pixelIndex;
-//    signed short pixel_value;
-//    for (int c = 0; c < 800;  c++)
-//    {
-//        pixelIndex[0] = 580;
-//        pixelIndex[1] = c;
-//        pixel_value = reader->GetOutput()->GetPixel(pixelIndex);
-//        std::cout << "pixel before is : " << pixel_value;
-//        reader->GetOutput()->SetPixel(pixelIndex, 255);
-//        pixel_value = reader->GetOutput()->GetPixel(pixelIndex);
-//        std::cout << "pixel after  is : " << pixel_value;
-//    }
+    //    ImageType::IndexType pixelIndex;
+    //    signed short pixel_value;
+    //    for (int c = 0; c < 800;  c++)
+    //    {
+    //        pixelIndex[0] = 580;
+    //        pixelIndex[1] = c;
+    //        pixel_value = reader->GetOutput()->GetPixel(pixelIndex);
+    //        std::cout << "pixel before is : " << pixel_value;
+    //        reader->GetOutput()->SetPixel(pixelIndex, 255);
+    //        pixel_value = reader->GetOutput()->GetPixel(pixelIndex);
+    //        std::cout << "pixel after  is : " << pixel_value;
+    //    }
 #endif
 }
 
 void SimpleView::slotExit() {
-  qApp->exit();
+    qApp->exit();
 }
 
 //temp test for pick pixel on QVTKWidget
@@ -782,7 +818,7 @@ void SimpleView::displayImage2(vtkImageData *image)
 {
     // Picker to pick pixels
     vtkSmartPointer<vtkPropPicker> propPicker =
-      vtkSmartPointer<vtkPropPicker>::New();
+            vtkSmartPointer<vtkPropPicker>::New();
     propPicker->PickFromListOn();
     // Create image actor
     vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
@@ -807,7 +843,7 @@ void SimpleView::displayImage2(vtkImageData *image)
     // Annotate the image with window/level and mouse over pixel
     // information
     vtkSmartPointer<vtkCornerAnnotation> cornerAnnotation =
-      vtkSmartPointer<vtkCornerAnnotation>::New();
+            vtkSmartPointer<vtkCornerAnnotation>::New();
     cornerAnnotation->SetLinearFontScaleFactor(2);
     cornerAnnotation->SetNonlinearFontScaleFactor(1);
     cornerAnnotation->SetMaximumFontSize(20);
@@ -818,8 +854,8 @@ void SimpleView::displayImage2(vtkImageData *image)
     renderer->AddViewProp(cornerAnnotation);
     // Callback listens to MouseMoveEvents invoked by the interactor's style
     vtkSmartPointer<vtkImageInteractionCallback> callback =
-      vtkSmartPointer<vtkImageInteractionCallback>::New();
-//    callback->SetViewer(imageViewer);
+            vtkSmartPointer<vtkImageInteractionCallback>::New();
+    //    callback->SetViewer(imageViewer);
     callback->SetAnnotation(cornerAnnotation);
     callback->SetPicker(propPicker);
     callback->SetViewer2(this->ui->qvtkWidget_Ori);
@@ -838,11 +874,12 @@ void SimpleView::displayImage2(vtkImageData *image)
 }
 
 //using QImage to show original image
-void SimpleView::displayMyView(QImage img)
+void SimpleView::displayMyView(QImage img, ViewMode view_mode)
 {
     MyView *mv = new(std::nothrow) MyView(this);
     mv->setGeometry(100, 200, 500, 500);
     mv->SetImage(img);
+    mv->setViewMode(view_mode);
     mv->Display();
 }
 
