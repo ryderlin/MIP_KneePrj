@@ -80,12 +80,15 @@ private:
 
   // Designer form
   Ui_SimpleView *ui;
-  C_fileIO myImage2D;
   static const int  dimension2D= 2;
   typedef itk::Image<float, dimension2D >  float2D;
   typedef itk::Image<unsigned char, dimension2D> uchar2D;
   uchar2D::Pointer OutImage;
   QString InputFile;
+
+public:
+//  static   C_fileIO myImage2D;
+
 };
 
 #endif // SimpleView_H

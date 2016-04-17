@@ -31,7 +31,7 @@
 #include "itkRegionGrowImageFilter.h"
 //#include "itkKLMRegionGrowImageFilter.h"
 #include "itkConnectedThresholdImageFilter.h"
-//#include "itkNeighborhoodConnectedImageFilter.h"
+#include "itkNeighborhoodConnectedImageFilter.h"
 //VTK
 #include <vtkAutoInit.h>
 #include <vtkDataObjectToTable.h>
@@ -74,6 +74,7 @@
     vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 using namespace std;
+static C_fileIO myImage2D;
 
 // Template for image value reading
 template<typename T>
@@ -294,13 +295,13 @@ public slots:
         ClickPointY[PointCount] = y;
         PointCount++;
         QRgb rgb = this->Qimage.pixel( x, y );
-        for (int r = x-2; r < x+3; r++)
-        {
-            for (int c = y-2; c < y+3; c++)
-            {
-                this->Qimage.setPixel(r, c, qRgb(0,255,0));
-            }
-        }
+//        for (int r = x-2; r < x+3; r++)
+//        {
+//            for (int c = y-2; c < y+3; c++)
+//            {
+//                this->Qimage.setPixel(r, c, qRgb(0,255,0));
+//            }
+//        }
         if (this->Mode == CalculateDistance && PointCount % 2 == 0)
         {
             QPainter pt(&Qimage);
@@ -341,26 +342,28 @@ private slots:
     {
         ITKImageReader = ReaderType::New();
         ITKImageReader->SetFileName(image_file.toLatin1().data());
-        typedef itk::ConnectedThresholdImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
+        typedef itk::NeighborhoodConnectedImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
         RegionGrowImageFilterType::Pointer regionGrow = RegionGrowImageFilterType::New();
         float lower = 0.0;
         float upper = 50.0;
+        regionGrow->SetInput(ITKImageReader->GetOutput());
         regionGrow->SetLower(lower);
         regionGrow->SetUpper(upper);
 
-        regionGrow->SetReplaceValue(150);
+        regionGrow->SetReplaceValue(255);
 
         // Seed 1: (25, 35)
         ImageType::IndexType seed1;
         seed1[0] = seed_x;
         seed1[1] = seed_y;
         regionGrow->SetSeed(seed1);
-        regionGrow->SetInput(ITKImageReader->GetOutput());
         regionGrow->Update();
-        ITKImageWriter = WriterType::New();
-        ITKImageWriter->SetFileName("region_growing1.bmp");
-        ITKImageWriter->SetInput(regionGrow->GetOutput());
-        ITKImageWriter->Update();
+        myImage2D.readFromOtherOutput(regionGrow->GetOutput());
+        myImage2D.writeImageToFile("region_growing2.bmp");
+//        ITKImageWriter = WriterType::New();
+//        ITKImageWriter->SetFileName("region_growing1.bmp");
+//        ITKImageWriter->SetInput(regionGrow->GetOutput());
+//        ITKImageWriter->Update();
     }
 
 private:
@@ -701,7 +704,10 @@ void SimpleView::slotSobel()
 
 void SimpleView::slotTest()
 {
-#if 1 //test
+    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+    this->ui->qvtkWidget_Seg->repaint();
+    this->ui->qvtkWidget_Seg->show();
+#if 0 //test
     myImage2D.writeImageToFile("KneeOut_merge.bmp");
     QImage inImg("KneeOut_merge.bmp");
     int Original_Image_Height = inImg.height();
