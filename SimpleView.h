@@ -61,6 +61,7 @@ public slots:
   virtual void slotReset();
   virtual void slotWriteFile();
   virtual void slotTest();
+  virtual void slotMerge();
   virtual void slotSobel();
   virtual void displayImage(vtkImageData *image);
   virtual void displayImage2(vtkImageData *image);
@@ -80,6 +81,7 @@ private:
 
   // Designer form
   Ui_SimpleView *ui;
+  C_fileIO myImage2D;
   static const int  dimension2D= 2;
   typedef itk::Image<float, dimension2D >  float2D;
   typedef itk::Image<unsigned char, dimension2D> uchar2D;

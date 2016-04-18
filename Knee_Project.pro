@@ -331,6 +331,7 @@ HEADERS += \
     C_fileIO.h \
     C_itkSeg.h \
     C_tool.h \
+    spline.h \
     itkImageToVTKImageFilter.h
 
 FORMS += \

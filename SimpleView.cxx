@@ -70,11 +70,12 @@
 
 #include "vtkSmartPointer.h"
 #include "C_itkSeg.h"
+#include "spline.h"
 #define VTK_CREATE(type, name) \
     vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 using namespace std;
-static C_fileIO myImage2D;
+//static C_fileIO myImage2D;
 
 // Template for image value reading
 template<typename T>
@@ -291,46 +292,43 @@ public slots:
         QPointF pos =  mapToScene( event->pos() );
         int x = ( int )pos.x();
         int y = ( int )pos.y();
-        ClickPointX[PointCount] = x;
-        ClickPointY[PointCount] = y;
-        PointCount++;
-        QRgb rgb = this->Qimage.pixel( x, y );
-//        for (int r = x-2; r < x+3; r++)
-//        {
-//            for (int c = y-2; c < y+3; c++)
-//            {
-//                this->Qimage.setPixel(r, c, qRgb(0,255,0));
-//            }
-//        }
-        if (this->Mode == CalculateDistance && PointCount % 2 == 0)
+        if (this->Mode == None || this->Mode == CalculateDistance)
         {
-            QPainter pt(&Qimage);
-            pt.setPen(Qt::green);
-            pt.drawLine(ClickPointX[PointCount-1],ClickPointY[PointCount-1],
-                    ClickPointX[PointCount-2],ClickPointY[PointCount-2] );
-            pt.end();
-            QLabel *qlDistance = new QLabel(this);
-            qlDistance->setStyleSheet("QLabel { color : red; }");
-            qlDistance->setGeometry(0, 0+(PointCount/2)*30, 300, 30);
-            QString line_info;
-            double distance = sqrt(pow(ClickPointX[PointCount-1] - ClickPointX[PointCount-2], 2) +
-                    pow(ClickPointY[PointCount-1] - ClickPointY[PointCount-2], 2));
-            line_info.sprintf("(%d,%d) to (%d,%d) is %lf",
-                              ClickPointX[PointCount-1],ClickPointY[PointCount-1],
-                    ClickPointX[PointCount-2],ClickPointY[PointCount-2], distance);
-            qlDistance->setText(line_info);
-            qlDistance->show();
+            ClickPointX[PointCount] = x;
+            ClickPointY[PointCount] = y;
+            PointCount++;
+            QRgb rgb = this->Qimage.pixel( x, y );
+            drawGreenDot(x,y);
+            if (this->Mode == CalculateDistance && PointCount % 2 == 0)
+            {
+                QPainter pt(&Qimage);
+                pt.setPen(Qt::green);
+                pt.drawLine(ClickPointX[PointCount-1],ClickPointY[PointCount-1],
+                        ClickPointX[PointCount-2],ClickPointY[PointCount-2] );
+                pt.end();
+                QLabel *qlDistance = new QLabel(this);
+                qlDistance->setStyleSheet("QLabel { color : red; }");
+                qlDistance->setGeometry(0, 0+(PointCount/2)*30, 300, 30);
+                QString line_info;
+                double distance = sqrt(pow(ClickPointX[PointCount-1] - ClickPointX[PointCount-2], 2) +
+                        pow(ClickPointY[PointCount-1] - ClickPointY[PointCount-2], 2));
+                line_info.sprintf("(%d,%d) to (%d,%d) is %lf",
+                                  ClickPointX[PointCount-1],ClickPointY[PointCount-1],
+                        ClickPointX[PointCount-2],ClickPointY[PointCount-2], distance);
+                qlDistance->setText(line_info);
+                qlDistance->show();
+            }
+
+            this->Display();
+            QString info;
+            info.sprintf("(%d,%d)=(%d,%d,%d)", x, y, qRed(rgb), qGreen(rgb), qBlue(rgb));
+
+            qlPixelInfo->hide();
+            qlPixelInfo->setGeometry(0, 0, 300, 30);
+            qlPixelInfo->setText(info);
+            qlPixelInfo->show();
         }
-
-        this->Display();
-        QString info;
-        info.sprintf("(%d,%d)=(%d,%d,%d)", x, y, qRed(rgb), qGreen(rgb), qBlue(rgb));
-
-        qlPixelInfo->hide();
-        qlPixelInfo->setGeometry(0, 0, 300, 30);
-        qlPixelInfo->setText(info);
-        qlPixelInfo->show();
-        if (this->Mode == RegionGrowing)
+        else if (this->Mode == RegionGrowing)
         {
             this->Qimage.save("region_growing.bmp");
             region_growing("region_growing.bmp", x, y);
@@ -358,12 +356,20 @@ private slots:
         seed1[1] = seed_y;
         regionGrow->SetSeed(seed1);
         regionGrow->Update();
-        myImage2D.readFromOtherOutput(regionGrow->GetOutput());
-        myImage2D.writeImageToFile("region_growing2.bmp");
-//        ITKImageWriter = WriterType::New();
-//        ITKImageWriter->SetFileName("region_growing1.bmp");
-//        ITKImageWriter->SetInput(regionGrow->GetOutput());
-//        ITKImageWriter->Update();
+        C_fileIO tmp_image;
+        tmp_image.readFromOtherOutput(regionGrow->GetOutput());
+        tmp_image.writeImageToFile("region_growing2.bmp");
+    }
+
+    void drawGreenDot(int x, int y)
+    {
+        for (int r = x-2; r < x+3; r++)
+        {
+            for (int c = y-2; c < y+3; c++)
+            {
+                this->Qimage.setPixel(r, c, qRgb(0,255,0));
+            }
+        }
     }
 
 private:
@@ -397,6 +403,7 @@ SimpleView::SimpleView()
     connect(this->ui->btnReset, SIGNAL (released()),this, SLOT (slotReset()));
     connect(this->ui->btnWriteFile, SIGNAL (released()),this, SLOT (slotWriteFile()));
     connect(this->ui->btnTest, SIGNAL (released()),this, SLOT (slotTest()));
+    connect(this->ui->btnMerge, SIGNAL (released()),this, SLOT (slotMerge()));
     connect(this->ui->btnSobel, SIGNAL (released()),this, SLOT (slotSobel()));
     this->ui->qvtkWidget_Ori->repaint();
     this->ui->qvtkWidget_Seg->hide();
@@ -515,7 +522,7 @@ void SimpleView::slotOpenFile()
     vtkimage->DeepCopy(flipYFilter->GetOutput());
 
     QImage img(InputFile);
-    this->displayMyView(img, RegionGrowing);
+    this->displayMyView(img, CalculateDistance);
     this->displayImage(vtkimage);
 
     reader = NULL;
@@ -616,7 +623,7 @@ bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexTyp
 void SimpleView::slotSobel()
 {
     myImage2D.readFiletoImages("KneeOut_merge.bmp");
-    //temp for sobel
+    //sobel
     typedef itk::Image<float, 2>          FloatImageType;
     typedef itk::SobelEdgeDetectionImageFilter <ImageType, FloatImageType>
             SobelEdgeDetectionImageFilterType;
@@ -631,30 +638,30 @@ void SimpleView::slotSobel()
     rescaler->SetOutputMaximum( itk::NumericTraits< unsigned char >::max() );
 
     myImage2D.readFromOtherOutput(rescaler->GetOutput());
-    //    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    //    this->ui->qvtkWidget_Seg->repaint();
-    //    this->ui->qvtkWidget_Seg->show();
     myImage2D.writeImageToFile("KneeOut_sobel.bmp");
+
+    //convert sobel to red line
     int row, col;
     QImage inImg("KneeOut_sobel.bmp");
     QImage outImg = QImage(InputFile.toLatin1().data());
     QImage ouImgC = outImg.convertToFormat(QImage::Format_RGB888);
-    for(row = 0; row < ouImgC.height(); row++)
+    int test_count = 0;
+    for (col = 0; col<ouImgC.width(); col++)
     {
-        for (col = 0; col<ouImgC.width(); col++)
+        for(row = 0; row < ouImgC.height(); row++)
         {
             QRgb rgb = inImg.pixel(col, row);
             if(qRed(rgb) > this->ui->leTestValue->text().toInt())
             {
                 ouImgC.setPixel(col, row, qRgb(255, 0, 0));
+                test_count++;
             }
             else
             {
-                //                ouImgC.setPixel(col, row, qRgb(0, 0, 0));
+//                ouImgC.setPixel(col, row, qRgb(0, 0, 0));
             }
         }
     }
-    //    outImg.save("KneeOut_sobel_red.bmp");
     this->displayMyView(ouImgC, RegionGrowing);
 #if 0//test code
     // Create an image data
@@ -702,12 +709,8 @@ void SimpleView::slotSobel()
 #endif
 }
 
-void SimpleView::slotTest()
+void SimpleView::slotMerge()
 {
-    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    this->ui->qvtkWidget_Seg->repaint();
-    this->ui->qvtkWidget_Seg->show();
-#if 0 //test
     myImage2D.writeImageToFile("KneeOut_merge.bmp");
     QImage inImg("KneeOut_merge.bmp");
     int Original_Image_Height = inImg.height();
@@ -733,6 +736,25 @@ void SimpleView::slotTest()
     }
     this->displayMyView(inImg, RegionGrowing);
     inImg.save("KneeOut_merge.bmp");
+}
+
+void SimpleView::slotTest()
+{
+#if 1 //test
+    QImage outImg = QImage(InputFile.toLatin1().data());
+    QImage ouImgC = outImg.convertToFormat(QImage::Format_RGB888);
+    int test_count = 0;
+    std::vector<double> X, Y;
+    X.push_back(22);X.push_back(62);X.push_back(127);X.push_back(193);X.push_back(258);X.push_back(309);X.push_back(369);
+    Y.push_back(22);Y.push_back(36);Y.push_back(67 );Y.push_back(87 );Y.push_back(72 );Y.push_back(49 );Y.push_back(35 );
+    tk::spline s;
+    s.set_points(X,Y);
+    for (int col = 0; col<ouImgC.width(); col++)
+    {
+        ouImgC.setPixel(col, (int)s((double)col), qRgb(255, 0, 0));
+        test_count++;
+    }
+    this->displayMyView(ouImgC, RegionGrowing);
 #endif
 #if 0//test for addimage filter
     typedef itk::ImageFileReader<ImageType> ReaderType;
