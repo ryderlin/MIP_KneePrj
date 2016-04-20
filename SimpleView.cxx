@@ -332,6 +332,8 @@ public slots:
         {
             this->Qimage.save("region_growing.bmp");
             region_growing("region_growing.bmp", x, y);
+            this->SetImage(QImage("region_growing.bmp"));
+            this->Display();
         }
     }
 
@@ -358,7 +360,7 @@ private slots:
         regionGrow->Update();
         C_fileIO tmp_image;
         tmp_image.readFromOtherOutput(regionGrow->GetOutput());
-        tmp_image.writeImageToFile("region_growing2.bmp");
+        tmp_image.writeImageToFile("region_growing.bmp");
     }
 
     void drawGreenDot(int x, int y)
@@ -622,7 +624,7 @@ bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexTyp
 
 void SimpleView::slotSobel()
 {
-    myImage2D.readFiletoImages("KneeOut_merge.bmp");
+    myImage2D.readFiletoImages("region_growing.bmp");
     //sobel
     typedef itk::Image<float, 2>          FloatImageType;
     typedef itk::SobelEdgeDetectionImageFilter <ImageType, FloatImageType>
@@ -644,17 +646,15 @@ void SimpleView::slotSobel()
     int row, col;
     QImage inImg("KneeOut_sobel.bmp");
     QImage outImg = QImage(InputFile.toLatin1().data());
-    QImage ouImgC = outImg.convertToFormat(QImage::Format_RGB888);
-    int test_count = 0;
-    for (col = 0; col<ouImgC.width(); col++)
+    QImage outImgC = outImg.convertToFormat(QImage::Format_RGB888);
+    for (col = 0; col<outImgC.width(); col++)
     {
-        for(row = 0; row < ouImgC.height(); row++)
+        for(row = 0; row < outImgC.height(); row++)
         {
             QRgb rgb = inImg.pixel(col, row);
             if(qRed(rgb) > this->ui->leTestValue->text().toInt())
             {
-                ouImgC.setPixel(col, row, qRgb(255, 0, 0));
-                test_count++;
+                outImgC.setPixel(col, row, qRgb(255, 0, 0));
             }
             else
             {
@@ -662,7 +662,8 @@ void SimpleView::slotSobel()
             }
         }
     }
-    this->displayMyView(ouImgC, RegionGrowing);
+    this->displayMyView(outImgC, None);
+    outImgC.save("KneeOut_sobel_red.bmp");
 #if 0//test code
     // Create an image data
     vtkSmartPointer<vtkImageData> imageData = vtkSmartPointer<vtkImageData>::New();
@@ -741,20 +742,45 @@ void SimpleView::slotMerge()
 void SimpleView::slotTest()
 {
 #if 1 //test
+    QImage inImg = QImage("KneeOut_sobel_red.bmp");
     QImage outImg = QImage(InputFile.toLatin1().data());
-    QImage ouImgC = outImg.convertToFormat(QImage::Format_RGB888);
-    int test_count = 0;
-    std::vector<double> X, Y;
-    X.push_back(22);X.push_back(62);X.push_back(127);X.push_back(193);X.push_back(258);X.push_back(309);X.push_back(369);
-    Y.push_back(22);Y.push_back(36);Y.push_back(67 );Y.push_back(87 );Y.push_back(72 );Y.push_back(49 );Y.push_back(35 );
-    tk::spline s;
-    s.set_points(X,Y);
-    for (int col = 0; col<ouImgC.width(); col++)
+    QImage outImgC = outImg.convertToFormat(QImage::Format_RGB888);
+    std::vector<double> x1, y1, x2, y2;
+    tk::spline s1, s2;
+    int first_line_y = 0;
+    for(int x = 0; x < inImg.width(); x+=20)
     {
-        ouImgC.setPixel(col, (int)s((double)col), qRgb(255, 0, 0));
-        test_count++;
+        for(int y = 0; y < inImg.height(); y++)
+        {
+            QRgb rgb = inImg.pixel(x, y);
+            if(qRed(rgb) >= 255)
+            {
+                if (first_line_y == 0)
+                {
+                    x1.push_back(x);y1.push_back(y);
+                    first_line_y = y;
+//                    std::cout << "(x1,y1) = (" <<x<<","<<y<<")"<<endl;
+                }
+                else if (y > first_line_y + 15)//find the second red line
+                {
+                    x2.push_back(x);y2.push_back(y+10);
+                    first_line_y = 0;
+//                    std::cout << "(x2,y2) = (" <<x<<","<<y<<")"<<endl;
+                    break;
+                }
+            }
+        }
     }
-    this->displayMyView(ouImgC, RegionGrowing);
+//    X.push_back(22);X.push_back(62);X.push_back(127);X.push_back(193);X.push_back(258);X.push_back(309);X.push_back(369);
+//    Y.push_back(22);Y.push_back(36);Y.push_back(67 );Y.push_back(87 );Y.push_back(72 );Y.push_back(49 );Y.push_back(35 );
+    s1.set_points(x1,y1);
+    s2.set_points(x2,y2);
+    for (int col = 0; col<outImgC.width(); col++)
+    {
+        outImgC.setPixel(col, (int)s1((double)col), qRgb(255, 0, 0));
+        outImgC.setPixel(col, (int)s2((double)col), qRgb(255, 0, 0));
+    }
+    this->displayMyView(outImgC, None);
 #endif
 #if 0//test for addimage filter
     typedef itk::ImageFileReader<ImageType> ReaderType;
