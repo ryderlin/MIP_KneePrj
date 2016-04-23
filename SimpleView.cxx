@@ -658,7 +658,7 @@ void SimpleView::slotSobel()
             }
             else
             {
-//                ouImgC.setPixel(col, row, qRgb(0, 0, 0));
+//                outImgC.setPixel(col, row, qRgb(0, 0, 0));
             }
         }
     }
@@ -747,32 +747,29 @@ void SimpleView::slotTest()
     QImage outImgC = outImg.convertToFormat(QImage::Format_RGB888);
     std::vector<double> x1, y1, x2, y2;
     tk::spline s1, s2;
-    int first_line_y = 0;
-    for(int x = 0; x < inImg.width(); x+=20)
+    for(int x = 0; x < inImg.width(); x += 20)
     {
         for(int y = 0; y < inImg.height(); y++)
         {
             QRgb rgb = inImg.pixel(x, y);
-            if(qRed(rgb) >= 255)
+            if(qRed(rgb) >=255)
             {
-                if (first_line_y == 0)
-                {
-                    x1.push_back(x);y1.push_back(y);
-                    first_line_y = y;
-//                    std::cout << "(x1,y1) = (" <<x<<","<<y<<")"<<endl;
-                }
-                else if (y > first_line_y + 15)//find the second red line
-                {
-                    x2.push_back(x);y2.push_back(y+10);
-                    first_line_y = 0;
-//                    std::cout << "(x2,y2) = (" <<x<<","<<y<<")"<<endl;
-                    break;
-                }
+                x1.push_back(x);y1.push_back(y);
+//                cout<<"(x,y) = ("<<x<<","<<y<<")"<<endl;
+                break;
+            }
+        }
+        for(int y = inImg.width()-1; y >= 0; y--)
+        {
+            QRgb rgb = inImg.pixel(x, y);
+            if(qRed(rgb) >=255)
+            {
+                x2.push_back(x);y2.push_back(y+5);
+//                cout<<"(x,y) = ("<<x<<","<<y<<")"<<endl;
+                break;
             }
         }
     }
-//    X.push_back(22);X.push_back(62);X.push_back(127);X.push_back(193);X.push_back(258);X.push_back(309);X.push_back(369);
-//    Y.push_back(22);Y.push_back(36);Y.push_back(67 );Y.push_back(87 );Y.push_back(72 );Y.push_back(49 );Y.push_back(35 );
     s1.set_points(x1,y1);
     s2.set_points(x2,y2);
     for (int col = 0; col<outImgC.width(); col++)
