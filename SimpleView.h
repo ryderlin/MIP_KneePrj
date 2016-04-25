@@ -61,6 +61,7 @@ public slots:
   virtual void slotReset();
   virtual void slotWriteFile();
   virtual void slotTest();
+  virtual void slotSpline();
   virtual void slotMerge();
   virtual void slotSobel();
   virtual void displayImage(vtkImageData *image);

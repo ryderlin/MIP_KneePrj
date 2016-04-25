@@ -32,6 +32,9 @@
 //#include "itkKLMRegionGrowImageFilter.h"
 #include "itkConnectedThresholdImageFilter.h"
 #include "itkNeighborhoodConnectedImageFilter.h"
+#include "itkBinaryBallStructuringElement.h"
+#include "itkBinaryMorphologicalClosingImageFilter.h"
+#include "itkBinaryMorphologicalOpeningImageFilter.h"
 //VTK
 #include <vtkAutoInit.h>
 #include <vtkDataObjectToTable.h>
@@ -358,6 +361,20 @@ private slots:
         seed1[1] = seed_y;
         regionGrow->SetSeed(seed1);
         regionGrow->Update();
+
+        //opening
+        typedef itk::BinaryBallStructuringElement<ImageType::PixelType, ImageType::ImageDimension>
+                    StructuringElementType;
+        StructuringElementType structuringElement_opening;
+        structuringElement_opening.SetRadius(5);
+        structuringElement_opening.CreateStructuringElement();
+        typedef itk::BinaryMorphologicalOpeningImageFilter <ImageType, ImageType, StructuringElementType>
+                BinaryMorphologicalOpeningImageFilterType;
+        BinaryMorphologicalOpeningImageFilterType::Pointer openingFilter
+                = BinaryMorphologicalOpeningImageFilterType::New();
+        openingFilter->SetInput(regionGrow->GetOutput());
+        openingFilter->SetKernel(structuringElement_opening);
+        openingFilter->Update();
         C_fileIO tmp_image;
         tmp_image.readFromOtherOutput(regionGrow->GetOutput());
         tmp_image.writeImageToFile("region_growing.bmp");
@@ -405,6 +422,7 @@ SimpleView::SimpleView()
     connect(this->ui->btnReset, SIGNAL (released()),this, SLOT (slotReset()));
     connect(this->ui->btnWriteFile, SIGNAL (released()),this, SLOT (slotWriteFile()));
     connect(this->ui->btnTest, SIGNAL (released()),this, SLOT (slotTest()));
+    connect(this->ui->btnSpline, SIGNAL (released()),this, SLOT (slotSpline()));
     connect(this->ui->btnMerge, SIGNAL (released()),this, SLOT (slotMerge()));
     connect(this->ui->btnSobel, SIGNAL (released()),this, SLOT (slotSobel()));
     this->ui->qvtkWidget_Ori->repaint();
@@ -604,7 +622,7 @@ void SimpleView::slotReset()
 
 void SimpleView::slotWriteFile()
 {
-    myImage2D.writeImageToFile("/home/ryderlin/Documents/KneeOut.bmp");
+    myImage2D.writeImageToFile("KneeOut.bmp");
 }
 
 bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexType pixelIndex, short pixel_value)
@@ -741,35 +759,112 @@ void SimpleView::slotMerge()
 
 void SimpleView::slotTest()
 {
+#if 1 //openinig & closing test
+    typedef itk::BinaryBallStructuringElement<ImageType::PixelType, ImageType::ImageDimension>
+                StructuringElementType;
+
+    //closing
+    StructuringElementType structuringElement_closing;
+    structuringElement_closing.SetRadius(5);
+    structuringElement_closing.CreateStructuringElement();
+    typedef itk::BinaryMorphologicalClosingImageFilter <ImageType, ImageType, StructuringElementType>
+            BinaryMorphologicalClosingImageFilterType;
+    BinaryMorphologicalClosingImageFilterType::Pointer closingFilter
+            = BinaryMorphologicalClosingImageFilterType::New();
+    closingFilter->SetInput(myImage2D.originalImages());
+    closingFilter->SetKernel(structuringElement_closing);
+    closingFilter->Update();
+    myImage2D.readFromOtherOutput(closingFilter->GetOutput());
+
+    //opening
+//    StructuringElementType structuringElement_opening;
+//    structuringElement_opening.SetRadius(5);
+//    structuringElement_opening.CreateStructuringElement();
+//    typedef itk::BinaryMorphologicalOpeningImageFilter <ImageType, ImageType, StructuringElementType>
+//            BinaryMorphologicalOpeningImageFilterType;
+//    BinaryMorphologicalOpeningImageFilterType::Pointer openingFilter
+//            = BinaryMorphologicalOpeningImageFilterType::New();
+//    openingFilter->SetInput(myImage2D.originalImages());
+//    openingFilter->SetKernel(structuringElement_opening);
+//    openingFilter->Update();
+//    myImage2D.readFromOtherOutput(openingFilter->GetOutput());
+
+    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+    this->ui->qvtkWidget_Seg->repaint();
+    this->ui->qvtkWidget_Seg->show();
+#endif
+}
+
+void drawGreenDot(QImage* img, int rgb, int x, int y)
+{
+    for (int r = x-2; r < x+3; r++)
+    {
+        for (int c = y-2; c < y+3; c++)
+        {
+            img->setPixel(r, c, rgb);
+        }
+    }
+}
+
+
+void SimpleView::slotSpline()
+{
 #if 1 //test
     QImage inImg = QImage("KneeOut_sobel_red.bmp");
     QImage outImg = QImage(InputFile.toLatin1().data());
     QImage outImgC = outImg.convertToFormat(QImage::Format_RGB888);
     std::vector<double> x1, y1, x2, y2;
     tk::spline s1, s2;
-    for(int x = 0; x < inImg.width(); x += 20)
+    int last_red_y = -1, last_red_x = -1;
+    float slope = 0.0;
+    for(int x = 0; x < inImg.width()-20; x += 20)
     {
         for(int y = 0; y < inImg.height(); y++)
         {
             QRgb rgb = inImg.pixel(x, y);
             if(qRed(rgb) >=255)
             {
-                x1.push_back(x);y1.push_back(y);
-//                cout<<"(x,y) = ("<<x<<","<<y<<")"<<endl;
+                slope = (float)abs(y-last_red_y) / (float)abs(x-last_red_x);
+                /*must sample first point*/
+                cout<<"(x,y) = ("<<x<<","<<y<<")";
+                cout<<"(last_red_x, last_red_y) = ("<<last_red_x<<","<<last_red_y<<")";
+                cout<<"slope = "<<slope<<endl;
+                if(last_red_y == -1 || slope < 0.6)
+                {
+                    x1.push_back(x);
+                    y1.push_back(y);
+                    drawGreenDot(&inImg,qRgb(0,255,0), x, y);
+                    last_red_x = x;
+                    last_red_y = y;
+//                    cout<<"in"<<endl;
+//                    cout<<"(x,y) = ("<<x<<","<<y<<")";
+//                    cout<<"slope = "<<slope<<endl;
+                }
                 break;
             }
         }
-        for(int y = inImg.width()-1; y >= 0; y--)
+//        last_red_x = -1;last_red_y = -1;
+        if (x ==last_red_x) last_red_x = -1;
+        for(int y = inImg.height()-1; y >= 0; y--)
         {
             QRgb rgb = inImg.pixel(x, y);
             if(qRed(rgb) >=255)
             {
-                x2.push_back(x);y2.push_back(y+5);
+                slope = (float)abs(y-last_red_y) / (float)abs(x-last_red_x);
+                if(last_red_y == -1 || slope < 0.6)
+                {
+                    x2.push_back(x);
+                    y2.push_back(y);
+                    drawGreenDot(&inImg,qRgb(0,0,255), x, y);
+                    last_red_x = x;
+                    last_red_y = y;
+                }
 //                cout<<"(x,y) = ("<<x<<","<<y<<")"<<endl;
                 break;
             }
         }
     }
+    inImg.save("spline_test.bmp");
     s1.set_points(x1,y1);
     s2.set_points(x2,y2);
     for (int col = 0; col<outImgC.width(); col++)
