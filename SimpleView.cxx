@@ -815,27 +815,28 @@ void SimpleView::slotSpline()
     QImage outImgC = outImg.convertToFormat(QImage::Format_RGB888);
     std::vector<double> x1, y1, x2, y2;
     tk::spline s1, s2;
-    int last_red_y = -1, last_red_x = -1;
+    int last_red_y1 = -1, last_red_x1 = -1;
+    int last_red_y2 = -1, last_red_x2 = -1;
     float slope = 0.0;
-    for(int x = 0; x < inImg.width()-20; x += 20)
+    for(int x = 0; x < inImg.width(); x += 20)
     {
         for(int y = 0; y < inImg.height(); y++)
         {
             QRgb rgb = inImg.pixel(x, y);
             if(qRed(rgb) >=255)
             {
-                slope = (float)abs(y-last_red_y) / (float)abs(x-last_red_x);
+                slope = (float)abs(y-last_red_y1) / (float)abs(x-last_red_x1);
                 /*must sample first point*/
                 cout<<"(x,y) = ("<<x<<","<<y<<")";
-                cout<<"(last_red_x, last_red_y) = ("<<last_red_x<<","<<last_red_y<<")";
+                cout<<"(last_red_x1, last_red_y1) = ("<<last_red_x1<<","<<last_red_y1<<")";
                 cout<<"slope = "<<slope<<endl;
-                if(last_red_y == -1 || slope < 0.6)
+                if(last_red_y1 == -1 || slope < 0.6)
                 {
                     x1.push_back(x);
                     y1.push_back(y);
                     drawGreenDot(&inImg,qRgb(0,255,0), x, y);
-                    last_red_x = x;
-                    last_red_y = y;
+                    last_red_x1 = x;
+                    last_red_y1 = y;
 //                    cout<<"in"<<endl;
 //                    cout<<"(x,y) = ("<<x<<","<<y<<")";
 //                    cout<<"slope = "<<slope<<endl;
@@ -843,21 +844,19 @@ void SimpleView::slotSpline()
                 break;
             }
         }
-//        last_red_x = -1;last_red_y = -1;
-        if (x ==last_red_x) last_red_x = -1;
         for(int y = inImg.height()-1; y >= 0; y--)
         {
             QRgb rgb = inImg.pixel(x, y);
             if(qRed(rgb) >=255)
             {
-                slope = (float)abs(y-last_red_y) / (float)abs(x-last_red_x);
-                if(last_red_y == -1 || slope < 0.6)
+                slope = (float)abs(y-last_red_y2) / (float)abs(x-last_red_x2);
+                if(last_red_y2 == -1 || slope < 0.6)
                 {
                     x2.push_back(x);
                     y2.push_back(y);
                     drawGreenDot(&inImg,qRgb(0,0,255), x, y);
-                    last_red_x = x;
-                    last_red_y = y;
+                    last_red_x2 = x;
+                    last_red_y2 = y;
                 }
 //                cout<<"(x,y) = ("<<x<<","<<y<<")"<<endl;
                 break;
