@@ -542,7 +542,7 @@ void SimpleView::slotOpenFile()
     vtkimage->DeepCopy(flipYFilter->GetOutput());
 
     QImage img(InputFile);
-    this->displayMyView(img, CalculateDistance);
+    this->displayMyView(img, RegionGrowing);
     this->displayImage(vtkimage);
 
     reader = NULL;
@@ -757,7 +757,83 @@ void SimpleView::slotMerge()
     inImg.save("KneeOut_merge.bmp");
 }
 
+void SimpleView::region_growing(int seed_x, int seed_y)
+{
+    typedef itk::ConnectedThresholdImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
+    RegionGrowImageFilterType::Pointer regionGrow = RegionGrowImageFilterType::New();
+    float lower = 0.0;
+    float upper = 50.0;
+    regionGrow->SetInput(myImage2D.originalImages());
+    regionGrow->SetLower(lower);
+    regionGrow->SetUpper(upper);
+
+    regionGrow->SetReplaceValue(100);
+
+    // Seed 1: (25, 35)
+    ImageType::IndexType seed1;
+    seed1[0] = 0;
+    seed1[1] = 0;
+    ImageType::IndexType seed2;
+    seed2[0] = 0;
+    seed2[1] = 175;
+    regionGrow->SetSeed(seed1);
+    regionGrow->SetSeed(seed2);
+    regionGrow->Update();
+
+    myImage2D.readFromOtherOutput(regionGrow->GetOutput());
+}
+
 void SimpleView::slotTest()
+{
+    //merge other fragments to the cartilage
+    ImageType::IndexType index;
+    int width = myImage2D.originalImages()->GetLargestPossibleRegion().GetSize()[0];
+    int height = myImage2D.originalImages()->GetLargestPossibleRegion().GetSize()[1];
+    cout << "w is: "<<width<<endl;
+    cout << "h is: "<<height<<endl;
+    bool b_find_region = false;
+    for(int y = 0; y < height; y++)
+    {
+        for(int x = 0; x < width; x++)
+        {
+            index[0] = x;
+            index[1] = y;
+            if (myImage2D.originalImages()->GetPixel(index) == 0)
+            {
+                region_growing(x, y);
+                b_find_region = true;
+                cout << "x1 is: "<<x<<endl;
+                cout << "y1 is: "<<y<<endl;
+                break;
+            }
+        }
+        if(b_find_region) break;
+    }
+//    b_find_region = false;
+//    for(int y = height - 1; y >=0; y--)
+//    {
+//        for(int x = 0; x < width; x++)
+//        {
+//            index[0] = x;
+//            index[1] = y;
+//            if (myImage2D.originalImages()->GetPixel(index) == 0)
+//            {
+//                region_growing(x, y);
+//                b_find_region = true;
+//                cout << "x2 is: "<<x<<endl;
+//                cout << "y2 is: "<<y<<endl;
+//                break;
+//            }
+//        }
+//        if(b_find_region) break;
+//    }
+    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+    this->ui->qvtkWidget_Seg->repaint();
+    this->ui->qvtkWidget_Seg->show();
+
+}
+
+void SimpleView::Opening()
 {
 #if 1 //openinig & closing test
     typedef itk::BinaryBallStructuringElement<ImageType::PixelType, ImageType::ImageDimension>
@@ -795,7 +871,7 @@ void SimpleView::slotTest()
 #endif
 }
 
-void drawGreenDot(QImage* img, int rgb, int x, int y)
+void drawColorDot(QImage* img, int rgb, int x, int y)
 {
     for (int r = x-2; r < x+3; r++)
     {
@@ -818,7 +894,7 @@ void SimpleView::slotSpline()
     int last_red_y1 = -1, last_red_x1 = -1;
     int last_red_y2 = -1, last_red_x2 = -1;
     float slope = 0.0;
-    for(int x = 0; x < inImg.width(); x += 20)
+    for(int x = 0; x < inImg.width(); x += 15)
     {
         for(int y = 0; y < inImg.height(); y++)
         {
@@ -834,7 +910,7 @@ void SimpleView::slotSpline()
                 {
                     x1.push_back(x);
                     y1.push_back(y);
-                    drawGreenDot(&inImg,qRgb(0,255,0), x, y);
+                    drawColorDot(&inImg,qRgb(0,255,0), x, y);
                     last_red_x1 = x;
                     last_red_y1 = y;
 //                    cout<<"in"<<endl;
@@ -854,7 +930,7 @@ void SimpleView::slotSpline()
                 {
                     x2.push_back(x);
                     y2.push_back(y);
-                    drawGreenDot(&inImg,qRgb(0,0,255), x, y);
+                    drawColorDot(&inImg,qRgb(0,0,255), x, y);
                     last_red_x2 = x;
                     last_red_y2 = y;
                 }

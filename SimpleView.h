@@ -78,6 +78,9 @@ private:
   bool up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexType pixelIndex, short pixel_value);
   QString getDICOMtagValue(itk::GDCMImageIO::Pointer gdcmIO, QString tagkey);
   vtkSmartPointer<vtkQtTableView> TableView;
+  void region_growing(int seed_x, int seed_y);
+  void Opening();
+
   //vtkImageViewer2 *viewer;
 
   // Designer form
