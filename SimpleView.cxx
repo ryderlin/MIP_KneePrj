@@ -78,7 +78,57 @@
     vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 using namespace std;
-//static C_fileIO myImage2D;
+
+//static utility
+static QImage region_growing(QString image_file, QString out_file, int seed_x, int seed_y, int replaced_pixel)
+{
+    ReaderType::Pointer ITKImageReader;
+    ITKImageReader = ReaderType::New();
+    ITKImageReader->SetFileName(image_file.toLatin1().data());
+    typedef itk::NeighborhoodConnectedImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
+    RegionGrowImageFilterType::Pointer regionGrow = RegionGrowImageFilterType::New();
+    float lower = 0.0;
+    float upper = 50.0;
+    regionGrow->SetInput(ITKImageReader->GetOutput());
+    regionGrow->SetLower(lower);
+    regionGrow->SetUpper(upper);
+
+    regionGrow->SetReplaceValue(replaced_pixel);
+
+    ImageType::IndexType seed1;
+    seed1[0] = seed_x;
+    seed1[1] = seed_y;
+    regionGrow->SetSeed(seed1);
+    regionGrow->Update();
+
+    //opening
+    typedef itk::BinaryBallStructuringElement<ImageType::PixelType, ImageType::ImageDimension>
+                StructuringElementType;
+    StructuringElementType structuringElement_opening;
+    structuringElement_opening.SetRadius(5);
+    structuringElement_opening.CreateStructuringElement();
+    typedef itk::BinaryMorphologicalOpeningImageFilter <ImageType, ImageType, StructuringElementType>
+            BinaryMorphologicalOpeningImageFilterType;
+    BinaryMorphologicalOpeningImageFilterType::Pointer openingFilter
+            = BinaryMorphologicalOpeningImageFilterType::New();
+    openingFilter->SetInput(regionGrow->GetOutput());
+    openingFilter->SetKernel(structuringElement_opening);
+    openingFilter->Update();
+    C_fileIO tmp_image;
+    tmp_image.readFromOtherOutput(regionGrow->GetOutput());
+    tmp_image.writeImageToFile(out_file.toLatin1().data());
+}
+
+void drawColorDot(QImage* img, int rgb, int x, int y)
+{
+    for (int r = x-2; r < x+3; r++)
+    {
+        for (int c = y-2; c < y+3; c++)
+        {
+            img->setPixel(r, c, rgb);
+        }
+    }
+}
 
 // Template for image value reading
 template<typename T>
@@ -301,7 +351,8 @@ public slots:
             ClickPointY[PointCount] = y;
             PointCount++;
             QRgb rgb = this->Qimage.pixel( x, y );
-            drawGreenDot(x,y);
+            drawColorDot(&Qimage, qRgb(0,255,0), x, y);
+//            drawGreenDot(x,y);
             if (this->Mode == CalculateDistance && PointCount % 2 == 0)
             {
                 QPainter pt(&Qimage);
@@ -333,63 +384,63 @@ public slots:
         }
         else if (this->Mode == RegionGrowing)
         {
-            this->Qimage.save("region_growing.bmp");
-            region_growing("region_growing.bmp", x, y);
-            this->SetImage(QImage("region_growing.bmp"));
+            this->Qimage.save(FILE_REGION_GROWING);
+            region_growing(FILE_REGION_GROWING, FILE_REGION_GROWING, x, y, 255);
+            this->SetImage(QImage(FILE_REGION_GROWING));
             this->Display();
         }
     }
 
 private slots:
-    QImage region_growing(QString image_file, int seed_x, int seed_y)
-    {
-        ITKImageReader = ReaderType::New();
-        ITKImageReader->SetFileName(image_file.toLatin1().data());
-        typedef itk::NeighborhoodConnectedImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
-        RegionGrowImageFilterType::Pointer regionGrow = RegionGrowImageFilterType::New();
-        float lower = 0.0;
-        float upper = 50.0;
-        regionGrow->SetInput(ITKImageReader->GetOutput());
-        regionGrow->SetLower(lower);
-        regionGrow->SetUpper(upper);
+//    QImage region_growing(QString image_file, int seed_x, int seed_y)
+//    {
+//        ITKImageReader = ReaderType::New();
+//        ITKImageReader->SetFileName(image_file.toLatin1().data());
+//        typedef itk::NeighborhoodConnectedImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
+//        RegionGrowImageFilterType::Pointer regionGrow = RegionGrowImageFilterType::New();
+//        float lower = 0.0;
+//        float upper = 50.0;
+//        regionGrow->SetInput(ITKImageReader->GetOutput());
+//        regionGrow->SetLower(lower);
+//        regionGrow->SetUpper(upper);
 
-        regionGrow->SetReplaceValue(255);
+//        regionGrow->SetReplaceValue(255);
 
-        // Seed 1: (25, 35)
-        ImageType::IndexType seed1;
-        seed1[0] = seed_x;
-        seed1[1] = seed_y;
-        regionGrow->SetSeed(seed1);
-        regionGrow->Update();
+//        // Seed 1: (25, 35)
+//        ImageType::IndexType seed1;
+//        seed1[0] = seed_x;
+//        seed1[1] = seed_y;
+//        regionGrow->SetSeed(seed1);
+//        regionGrow->Update();
 
-        //opening
-        typedef itk::BinaryBallStructuringElement<ImageType::PixelType, ImageType::ImageDimension>
-                    StructuringElementType;
-        StructuringElementType structuringElement_opening;
-        structuringElement_opening.SetRadius(5);
-        structuringElement_opening.CreateStructuringElement();
-        typedef itk::BinaryMorphologicalOpeningImageFilter <ImageType, ImageType, StructuringElementType>
-                BinaryMorphologicalOpeningImageFilterType;
-        BinaryMorphologicalOpeningImageFilterType::Pointer openingFilter
-                = BinaryMorphologicalOpeningImageFilterType::New();
-        openingFilter->SetInput(regionGrow->GetOutput());
-        openingFilter->SetKernel(structuringElement_opening);
-        openingFilter->Update();
-        C_fileIO tmp_image;
-        tmp_image.readFromOtherOutput(regionGrow->GetOutput());
-        tmp_image.writeImageToFile("region_growing.bmp");
-    }
+//        //opening
+//        typedef itk::BinaryBallStructuringElement<ImageType::PixelType, ImageType::ImageDimension>
+//                    StructuringElementType;
+//        StructuringElementType structuringElement_opening;
+//        structuringElement_opening.SetRadius(5);
+//        structuringElement_opening.CreateStructuringElement();
+//        typedef itk::BinaryMorphologicalOpeningImageFilter <ImageType, ImageType, StructuringElementType>
+//                BinaryMorphologicalOpeningImageFilterType;
+//        BinaryMorphologicalOpeningImageFilterType::Pointer openingFilter
+//                = BinaryMorphologicalOpeningImageFilterType::New();
+//        openingFilter->SetInput(regionGrow->GetOutput());
+//        openingFilter->SetKernel(structuringElement_opening);
+//        openingFilter->Update();
+//        C_fileIO tmp_image;
+//        tmp_image.readFromOtherOutput(regionGrow->GetOutput());
+//        tmp_image.writeImageToFile(FILE_REGION_GROWING);
+//    }
 
-    void drawGreenDot(int x, int y)
-    {
-        for (int r = x-2; r < x+3; r++)
-        {
-            for (int c = y-2; c < y+3; c++)
-            {
-                this->Qimage.setPixel(r, c, qRgb(0,255,0));
-            }
-        }
-    }
+//    void drawGreenDot(int x, int y)
+//    {
+//        for (int r = x-2; r < x+3; r++)
+//        {
+//            for (int c = y-2; c < y+3; c++)
+//            {
+//                this->Qimage.setPixel(r, c, qRgb(0,255,0));
+//            }
+//        }
+//    }
 
 private:
     QImage Qimage;
@@ -412,6 +463,9 @@ SimpleView::SimpleView()
     //    VTK_MODULE_INIT(vtkRenderingWindow);sfdfs
     this->ui = new Ui_SimpleView;
     this->ui->setupUi(this);
+
+    //create output file dir
+    if(!QDir(OUT_FILE_DIR).exists()) QDir().mkdir(OUT_FILE_DIR);
 
     // Set up action signals and slots
     connect(this->ui->actionOpenFile, SIGNAL(triggered()), this, SLOT(slotOpenFile()));
@@ -439,7 +493,7 @@ SimpleView::~SimpleView()
 void SimpleView::slotOpenFile()
 {
     itk::BMPImageIOFactory::RegisterOneFactory();
-    itk::JPEGImageIOFactory::RegisterOneFactory();
+//    itk::JPEGImageIOFactory::RegisterOneFactory();
     InputFile = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath());
 
 #if 0 //for testing use
@@ -516,7 +570,7 @@ void SimpleView::slotOpenFile()
     }
 #endif
     myImage2D.readFromOtherOutput(reader->GetOutput());
-    myImage2D.writeImageToFile("dicom_test.jpg");
+//    myImage2D.writeImageToFile("dicom_test.jpg");
 #endif
     /***** 變數設定 *****/
     // image is grayscale
@@ -594,8 +648,6 @@ void SimpleView::slotRunAD()
 
 void SimpleView::slotRunSig()
 {
-#if 0 //for testing use
-#else
     double alpha = this->ui->leSigAlpha->text().toDouble();
     double beta = this->ui->leSigBeta->text().toDouble();
     typedef itk::SigmoidImageFilter <ImageType, ImageType>
@@ -608,7 +660,6 @@ void SimpleView::slotRunSig()
     sigmoidFilter->SetAlpha(alpha);
     sigmoidFilter->SetBeta(beta);
     myImage2D.readFromOtherOutput(sigmoidFilter->GetOutput());
-#endif
     this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
     this->ui->qvtkWidget_Seg->repaint();
     this->ui->qvtkWidget_Seg->show();
@@ -622,7 +673,7 @@ void SimpleView::slotReset()
 
 void SimpleView::slotWriteFile()
 {
-    myImage2D.writeImageToFile("KneeOut.bmp");
+    myImage2D.writeImageToFile(FILE_SAVE);
 }
 
 bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexType pixelIndex, short pixel_value)
@@ -642,7 +693,7 @@ bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexTyp
 
 void SimpleView::slotSobel()
 {
-    myImage2D.readFiletoImages("region_growing.bmp");
+    myImage2D.readFiletoImages(FILE_REGION_GROWING);
     //sobel
     typedef itk::Image<float, 2>          FloatImageType;
     typedef itk::SobelEdgeDetectionImageFilter <ImageType, FloatImageType>
@@ -658,11 +709,11 @@ void SimpleView::slotSobel()
     rescaler->SetOutputMaximum( itk::NumericTraits< unsigned char >::max() );
 
     myImage2D.readFromOtherOutput(rescaler->GetOutput());
-    myImage2D.writeImageToFile("KneeOut_sobel.bmp");
+    myImage2D.writeImageToFile(FILE_SOBEL);
 
     //convert sobel to red line
     int row, col;
-    QImage inImg("KneeOut_sobel.bmp");
+    QImage inImg(FILE_SOBEL);
     QImage outImg = QImage(InputFile.toLatin1().data());
     QImage outImgC = outImg.convertToFormat(QImage::Format_RGB888);
     for (col = 0; col<outImgC.width(); col++)
@@ -674,64 +725,16 @@ void SimpleView::slotSobel()
             {
                 outImgC.setPixel(col, row, qRgb(255, 0, 0));
             }
-            else
-            {
-//                outImgC.setPixel(col, row, qRgb(0, 0, 0));
-            }
         }
     }
     this->displayMyView(outImgC, None);
-    outImgC.save("KneeOut_sobel_red.bmp");
-#if 0//test code
-    // Create an image data
-    vtkSmartPointer<vtkImageData> imageData = vtkSmartPointer<vtkImageData>::New();
-    imageData->DeepCopy(myImage2D.vtkImage());
-    int* dims = myImage2D.vtkImage()->GetDimensions();
-    imageData->AllocateScalars(VTK_DOUBLE,1);
-    imageData->SetDimensions(dims);
-    // int dims[3]; // can't do this
-
-    std::cout << "Dims: " << " x: " << dims[0] << " y: " << dims[1] << " z: " << dims[2] << std::endl;
-
-    std::cout << "Number of points: " << imageData->GetNumberOfPoints() << std::endl;
-    std::cout << "Number of cells: " << imageData->GetNumberOfCells() << std::endl;
-    for (int z = 0; z < dims[2]; z++)
-    {
-        for (int y = 0; y < dims[1]; y++)
-        {
-            for (int x = 0; x < dims[0]; x++)
-            {
-                int* pixel = static_cast<int*>(myImage2D.vtkImage()->GetScalarPointer(x,y,z));
-                //                if (pixel[0] != 0)
-                //                {
-                //                    imageData->SetScalarComponentFromDouble(x,y,z,0, 255);
-                //                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
-                //                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
-                //                }
-                //                if (myImage2D.vtkImage()->getscGetScalarComponentAsDouble(x,y,z,0) != 0.0)
-                //                {
-                //                    imageData->SetScalarComponentFromDouble(x,y,z,0, 255);
-                //                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
-                //                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
-                //                }
-                //                else
-                //                {
-                //                    imageData->SetScalarComponentFromDouble(x,y,z,0, 0);
-                //                    imageData->SetScalarComponentFromDouble(x,y,z,1, 0);
-                //                    imageData->SetScalarComponentFromDouble(x,y,z,2, 0);
-                //                }
-            }
-        }
-    }
-    displayImage(imageData);
-
-#endif
+    outImgC.save(FILE_SOBEL_RED);
 }
 
 void SimpleView::slotMerge()
 {
-    myImage2D.writeImageToFile("KneeOut_merge.bmp");
-    QImage inImg("KneeOut_merge.bmp");
+    myImage2D.writeImageToFile(FILE_MRF_MERGE);
+    QImage inImg(FILE_MRF_MERGE);
     int Original_Image_Height = inImg.height();
     int Original_Image_Width = inImg.width();
     float ClassNumber;                                 //the number of classes used by MRF
@@ -754,53 +757,52 @@ void SimpleView::slotMerge()
         }
     }
     this->displayMyView(inImg, RegionGrowing);
-    inImg.save("KneeOut_merge.bmp");
+    inImg.save(FILE_MRF_MERGE);
 }
 
-void SimpleView::region_growing(int seed_x, int seed_y)
+void SimpleView::region_growing(QString image_file, QString out_file, int seed_x, int seed_y, int replaced_pixel)
 {
-    typedef itk::ConnectedThresholdImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
+    ReaderType::Pointer ITKImageReader;
+    ITKImageReader = ReaderType::New();
+    ITKImageReader->SetFileName(image_file.toLatin1().data());
+    typedef itk::NeighborhoodConnectedImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
     RegionGrowImageFilterType::Pointer regionGrow = RegionGrowImageFilterType::New();
     float lower = 0.0;
     float upper = 50.0;
-    regionGrow->SetInput(myImage2D.originalImages());
+    regionGrow->SetInput(ITKImageReader->GetOutput());
     regionGrow->SetLower(lower);
     regionGrow->SetUpper(upper);
 
-    regionGrow->SetReplaceValue(100);
+    regionGrow->SetReplaceValue(replaced_pixel);
 
-    // Seed 1: (25, 35)
     ImageType::IndexType seed1;
-    seed1[0] = 0;
-    seed1[1] = 0;
-    ImageType::IndexType seed2;
-    seed2[0] = 0;
-    seed2[1] = 175;
+    seed1[0] = seed_x;
+    seed1[1] = seed_y;
     regionGrow->SetSeed(seed1);
-    regionGrow->SetSeed(seed2);
     regionGrow->Update();
 
-    myImage2D.readFromOtherOutput(regionGrow->GetOutput());
+    C_fileIO tmp_image;
+    tmp_image.readFromOtherOutput(regionGrow->GetOutput());
+    tmp_image.writeImageToFile(out_file.toLatin1().data());
 }
-
 void SimpleView::slotTest()
 {
     //merge other fragments to the cartilage
-    ImageType::IndexType index;
-    int width = myImage2D.originalImages()->GetLargestPossibleRegion().GetSize()[0];
-    int height = myImage2D.originalImages()->GetLargestPossibleRegion().GetSize()[1];
+    QImage ori_image(InputFile);
+    int width = ori_image.width();
+    int height = ori_image.height();
     cout << "w is: "<<width<<endl;
     cout << "h is: "<<height<<endl;
+    //generate the top part of the region growing image
     bool b_find_region = false;
     for(int y = 0; y < height; y++)
     {
         for(int x = 0; x < width; x++)
         {
-            index[0] = x;
-            index[1] = y;
-            if (myImage2D.originalImages()->GetPixel(index) == 0)
+            QRgb pixel = ori_image.pixel(x, y);
+            if (qRed(pixel) == 0)
             {
-                region_growing(x, y);
+                region_growing(InputFile, FILE_REGION_GROWING_TOP, x, y, 150);
                 b_find_region = true;
                 cout << "x1 is: "<<x<<endl;
                 cout << "y1 is: "<<y<<endl;
@@ -809,27 +811,48 @@ void SimpleView::slotTest()
         }
         if(b_find_region) break;
     }
-//    b_find_region = false;
-//    for(int y = height - 1; y >=0; y--)
-//    {
-//        for(int x = 0; x < width; x++)
-//        {
-//            index[0] = x;
-//            index[1] = y;
-//            if (myImage2D.originalImages()->GetPixel(index) == 0)
-//            {
-//                region_growing(x, y);
-//                b_find_region = true;
-//                cout << "x2 is: "<<x<<endl;
-//                cout << "y2 is: "<<y<<endl;
-//                break;
-//            }
-//        }
-//        if(b_find_region) break;
-//    }
-    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    this->ui->qvtkWidget_Seg->repaint();
-    this->ui->qvtkWidget_Seg->show();
+    //generate the bottom part of the region growing image
+    b_find_region = false;
+    for(int y = height - 1; y >=0; y--)
+    {
+        for(int x = 0; x < width; x++)
+        {
+            QRgb pixel = ori_image.pixel(x, y);
+            if (qRed(pixel) == 0)
+            {
+                region_growing(InputFile, FILE_REGION_GROWING_BOT, x, y, 150);
+                b_find_region = true;
+                cout << "x2 is: "<<x<<endl;
+                cout << "y2 is: "<<y<<endl;
+                break;
+            }
+        }
+        if(b_find_region) break;
+    }
+
+    //merge top & bottom part to a new image as to remove fragments
+    QImage top_img(FILE_REGION_GROWING_TOP);
+    QImage bot_img(FILE_REGION_GROWING_BOT);
+    QImage out_img(width, height, QImage::Format_RGB888);
+    for(int x = 0; x < width; x++)
+    {
+        for(int y = 0; y < height; y++)
+        {
+            if (qRed(top_img.pixel(x, y)) == 150 || qRed(bot_img.pixel(x, y)))
+            {
+                out_img.setPixel(x,y,qRgb(0,0,0));
+            }
+            else
+            {
+                out_img.setPixel(x,y,qRgb(255,255,255));
+            }
+        }
+    }
+    out_img.save(FILE_REMOVE_FRAGMENT);
+
+//    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+//    this->ui->qvtkWidget_Seg->repaint();
+//    this->ui->qvtkWidget_Seg->show();
 
 }
 
@@ -871,22 +894,10 @@ void SimpleView::Opening()
 #endif
 }
 
-void drawColorDot(QImage* img, int rgb, int x, int y)
-{
-    for (int r = x-2; r < x+3; r++)
-    {
-        for (int c = y-2; c < y+3; c++)
-        {
-            img->setPixel(r, c, rgb);
-        }
-    }
-}
-
-
 void SimpleView::slotSpline()
 {
 #if 1 //test
-    QImage inImg = QImage("KneeOut_sobel_red.bmp");
+    QImage inImg = QImage(FILE_SOBEL_RED);
     QImage outImg = QImage(InputFile.toLatin1().data());
     QImage outImgC = outImg.convertToFormat(QImage::Format_RGB888);
     std::vector<double> x1, y1, x2, y2;
@@ -939,7 +950,7 @@ void SimpleView::slotSpline()
             }
         }
     }
-    inImg.save("spline_test.bmp");
+    inImg.save(FILE_SPLINE_SAMPLE);
     s1.set_points(x1,y1);
     s2.set_points(x2,y2);
     for (int col = 0; col<outImgC.width(); col++)
@@ -956,7 +967,7 @@ void SimpleView::slotSpline()
     reader->Update();
 
     ReaderType::Pointer reader1 = ReaderType::New();
-    reader1->SetFileName("KneeOut_sobel_red.bmp");
+    reader1->SetFileName(FILE_SOBEL_RED);
     reader1->Update();
     typedef itk::AddImageFilter <ImageType, ImageType >
             AddImageFilterType;

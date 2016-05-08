@@ -16,6 +16,19 @@
 #include <QMainWindow>
 #include "C_fileIO.h"
 
+/*define*/
+//file using
+#define OUT_FILE_DIR                "OUTFILE/"
+#define FILE_SAVE                   OUT_FILE_DIR"KneeOut.bmp"
+#define FILE_SOBEL                  OUT_FILE_DIR"KneeOut_sobel.bmp"
+#define FILE_SOBEL_RED              OUT_FILE_DIR"KneeOut_sobel_red.bmp"
+#define FILE_MRF_MERGE              OUT_FILE_DIR"KneeOut_merge.bmp"
+#define FILE_REGION_GROWING         OUT_FILE_DIR"region_growing.bmp"
+#define FILE_SPLINE_SAMPLE          OUT_FILE_DIR"spline_sample.bmp"
+#define FILE_REGION_GROWING_TOP     OUT_FILE_DIR"region_growing_top.bmp"
+#define FILE_REGION_GROWING_BOT     OUT_FILE_DIR"region_growing_bot.bmp"
+#define FILE_REMOVE_FRAGMENT        OUT_FILE_DIR"remove_fragment.bmp"
+
 #if 0//set rgb pixel
 typedef itk::RGBPixel<unsigned char> RGBPixelType;
 typedef itk::Image<RGBPixelType,2> ImageType;
@@ -78,7 +91,7 @@ private:
   bool up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexType pixelIndex, short pixel_value);
   QString getDICOMtagValue(itk::GDCMImageIO::Pointer gdcmIO, QString tagkey);
   vtkSmartPointer<vtkQtTableView> TableView;
-  void region_growing(int seed_x, int seed_y);
+  void region_growing(QString image_file, QString out_file, int seed_x, int seed_y, int replaced_pixel);
   void Opening();
 
   //vtkImageViewer2 *viewer;
