@@ -596,7 +596,7 @@ void SimpleView::slotOpenFile()
     vtkimage->DeepCopy(flipYFilter->GetOutput());
 
     QImage img(InputFile);
-    this->displayMyView(img, RegionGrowing);
+    this->displayMyView(img, None);
     this->displayImage(vtkimage);
 
     reader = NULL;
@@ -693,7 +693,7 @@ bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexTyp
 
 void SimpleView::slotSobel()
 {
-    myImage2D.readFiletoImages(FILE_REGION_GROWING);
+    myImage2D.readFiletoImages(FILE_REMOVE_FRAGMENT);
     //sobel
     typedef itk::Image<float, 2>          FloatImageType;
     typedef itk::SobelEdgeDetectionImageFilter <ImageType, FloatImageType>
@@ -745,6 +745,7 @@ void SimpleView::slotMerge()
     ClassNumber = (float)(this->ui->leIterationNum->text().toInt());
     SelectingClass = (float)(this->ui->leMergedCls->text().toInt());
     ThresholdingValue = (int)(((255.0 / (ClassNumber - 1.0)) * (SelectingClass - 1.0)) + 2.0);
+    cout << "ThresholdingValue is : " << ThresholdingValue << endl;
     for(int j = 0;j < Original_Image_Height;j++)
     {
         for(int i = 0;i < Original_Image_Width;i++)
@@ -788,7 +789,7 @@ void SimpleView::region_growing(QString image_file, QString out_file, int seed_x
 void SimpleView::slotTest()
 {
     //merge other fragments to the cartilage
-    QImage ori_image(InputFile);
+    QImage ori_image(FILE_REGION_GROWING);
     int width = ori_image.width();
     int height = ori_image.height();
     cout << "w is: "<<width<<endl;
@@ -802,7 +803,7 @@ void SimpleView::slotTest()
             QRgb pixel = ori_image.pixel(x, y);
             if (qRed(pixel) == 0)
             {
-                region_growing(InputFile, FILE_REGION_GROWING_TOP, x, y, 150);
+                region_growing(FILE_REGION_GROWING, FILE_REGION_GROWING_TOP, x, y, 150);
                 b_find_region = true;
                 cout << "x1 is: "<<x<<endl;
                 cout << "y1 is: "<<y<<endl;
@@ -820,7 +821,7 @@ void SimpleView::slotTest()
             QRgb pixel = ori_image.pixel(x, y);
             if (qRed(pixel) == 0)
             {
-                region_growing(InputFile, FILE_REGION_GROWING_BOT, x, y, 150);
+                region_growing(FILE_REGION_GROWING, FILE_REGION_GROWING_BOT, x, y, 150);
                 b_find_region = true;
                 cout << "x2 is: "<<x<<endl;
                 cout << "y2 is: "<<y<<endl;
@@ -849,6 +850,8 @@ void SimpleView::slotTest()
         }
     }
     out_img.save(FILE_REMOVE_FRAGMENT);
+    displayMyView(out_img, None);
+    Opening();
 
 //    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
 //    this->ui->qvtkWidget_Seg->repaint();
@@ -859,34 +862,38 @@ void SimpleView::slotTest()
 void SimpleView::Opening()
 {
 #if 1 //openinig & closing test
+    ReaderType::Pointer ITKImageReader;
+    ITKImageReader = ReaderType::New();
+    ITKImageReader->SetFileName(FILE_REMOVE_FRAGMENT);
     typedef itk::BinaryBallStructuringElement<ImageType::PixelType, ImageType::ImageDimension>
                 StructuringElementType;
 
     //closing
-    StructuringElementType structuringElement_closing;
-    structuringElement_closing.SetRadius(5);
-    structuringElement_closing.CreateStructuringElement();
-    typedef itk::BinaryMorphologicalClosingImageFilter <ImageType, ImageType, StructuringElementType>
-            BinaryMorphologicalClosingImageFilterType;
-    BinaryMorphologicalClosingImageFilterType::Pointer closingFilter
-            = BinaryMorphologicalClosingImageFilterType::New();
-    closingFilter->SetInput(myImage2D.originalImages());
-    closingFilter->SetKernel(structuringElement_closing);
-    closingFilter->Update();
-    myImage2D.readFromOtherOutput(closingFilter->GetOutput());
+//    StructuringElementType structuringElement_closing;
+//    structuringElement_closing.SetRadius(5);
+//    structuringElement_closing.CreateStructuringElement();
+//    typedef itk::BinaryMorphologicalClosingImageFilter <ImageType, ImageType, StructuringElementType>
+//            BinaryMorphologicalClosingImageFilterType;
+//    BinaryMorphologicalClosingImageFilterType::Pointer closingFilter
+//            = BinaryMorphologicalClosingImageFilterType::New();
+//    closingFilter->SetInput(ITKImageReader->GetOutput());
+//    closingFilter->SetKernel(structuringElement_closing);
+//    closingFilter->Update();
+//    myImage2D.readFromOtherOutput(closingFilter->GetOutput());
 
     //opening
-//    StructuringElementType structuringElement_opening;
-//    structuringElement_opening.SetRadius(5);
-//    structuringElement_opening.CreateStructuringElement();
-//    typedef itk::BinaryMorphologicalOpeningImageFilter <ImageType, ImageType, StructuringElementType>
-//            BinaryMorphologicalOpeningImageFilterType;
-//    BinaryMorphologicalOpeningImageFilterType::Pointer openingFilter
-//            = BinaryMorphologicalOpeningImageFilterType::New();
-//    openingFilter->SetInput(myImage2D.originalImages());
-//    openingFilter->SetKernel(structuringElement_opening);
-//    openingFilter->Update();
-//    myImage2D.readFromOtherOutput(openingFilter->GetOutput());
+    StructuringElementType structuringElement_opening;
+    structuringElement_opening.SetRadius(6);
+    structuringElement_opening.CreateStructuringElement();
+    typedef itk::BinaryMorphologicalOpeningImageFilter <ImageType, ImageType, StructuringElementType>
+            BinaryMorphologicalOpeningImageFilterType;
+    BinaryMorphologicalOpeningImageFilterType::Pointer openingFilter
+            = BinaryMorphologicalOpeningImageFilterType::New();
+    openingFilter->SetInput(ITKImageReader->GetOutput());
+    openingFilter->SetKernel(structuringElement_opening);
+    openingFilter->Update();
+    myImage2D.readFromOtherOutput(openingFilter->GetOutput());
+    myImage2D.writeImageToFile(FILE_REMOVE_FRAGMENT);
 
     this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
     this->ui->qvtkWidget_Seg->repaint();
