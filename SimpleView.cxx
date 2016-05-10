@@ -788,6 +788,12 @@ void SimpleView::region_growing(QString image_file, QString out_file, int seed_x
 }
 void SimpleView::slotTest()
 {
+    cout << "spline bottom1 is :" << lowestY_x1 << "," << SplineY1[lowestY_x1]<<endl;
+    cout << "spline bottom2 is :" << lowestY_x2 << "," << SplineY2[lowestY_x2]<<endl;
+}
+
+void SimpleView::RemoveFragments()
+{
     //merge other fragments to the cartilage
     QImage ori_image(FILE_REGION_GROWING);
     int width = ori_image.width();
@@ -960,12 +966,32 @@ void SimpleView::slotSpline()
     inImg.save(FILE_SPLINE_SAMPLE);
     s1.set_points(x1,y1);
     s2.set_points(x2,y2);
+    memset(SplineY1, 0, sizeof(SplineY1));
+    memset(SplineY2, 0, sizeof(SplineY2));
+    lowestY_x1 = lowestY_x2 = 0;
+    int max_y1 = 0, max_y2 = 0;
     for (int col = 0; col<outImgC.width(); col++)
     {
         outImgC.setPixel(col, (int)s1((double)col), qRgb(255, 0, 0));
         outImgC.setPixel(col, (int)s2((double)col), qRgb(255, 0, 0));
+        //recording the 2 spline cordinates, and lowestY_x1, lowestY_x2
+        SplineY1[col] = (int)s1((double)col);
+        SplineY2[col] = (int)s2((double)col);
+        if (SplineY1[col] > max_y1)
+        {
+            max_y1 = SplineY1[col];
+            lowestY_x1 = col;
+        }
+        if (SplineY2[col] > max_y2)
+        {
+            max_y2 = SplineY2[col];
+            lowestY_x2 = col;
+        }
     }
+    drawColorDot(&outImgC, qRgb(0,255,0),lowestY_x1, SplineY1[lowestY_x1]);
+    drawColorDot(&outImgC, qRgb(0,255,0),lowestY_x2, SplineY2[lowestY_x2]);
     this->displayMyView(outImgC, None);
+    outImgC.save(FILE_SPLINE);
 #endif
 #if 0//test for addimage filter
     typedef itk::ImageFileReader<ImageType> ReaderType;

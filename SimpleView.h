@@ -24,6 +24,7 @@
 #define FILE_SOBEL_RED              OUT_FILE_DIR"KneeOut_sobel_red.bmp"
 #define FILE_MRF_MERGE              OUT_FILE_DIR"KneeOut_merge.bmp"
 #define FILE_REGION_GROWING         OUT_FILE_DIR"region_growing.bmp"
+#define FILE_SPLINE                 OUT_FILE_DIR"spline_out.bmp"
 #define FILE_SPLINE_SAMPLE          OUT_FILE_DIR"spline_sample.bmp"
 #define FILE_REGION_GROWING_TOP     OUT_FILE_DIR"region_growing_top.bmp"
 #define FILE_REGION_GROWING_BOT     OUT_FILE_DIR"region_growing_bot.bmp"
@@ -93,6 +94,7 @@ private:
   vtkSmartPointer<vtkQtTableView> TableView;
   void region_growing(QString image_file, QString out_file, int seed_x, int seed_y, int replaced_pixel);
   void Opening();
+  void RemoveFragments();
 
   //vtkImageViewer2 *viewer;
 
@@ -104,6 +106,10 @@ private:
   typedef itk::Image<unsigned char, dimension2D> uchar2D;
   uchar2D::Pointer OutImage;
   QString InputFile;
+  //for recording two red splines' Y cordinates, because X will be sequential from 0 to width.
+  int SplineY1[1000], SplineY2[1000];
+  int lowestY_x1, lowestY_x2;
+//  std::vector<int> SplineY1, SplineY2;
 
 public:
 //  static   C_fileIO myImage2D;
