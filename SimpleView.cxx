@@ -479,6 +479,7 @@ SimpleView::SimpleView()
     connect(this->ui->btnSpline, SIGNAL (released()),this, SLOT (slotSpline()));
     connect(this->ui->btnMerge, SIGNAL (released()),this, SLOT (slotMerge()));
     connect(this->ui->btnSobel, SIGNAL (released()),this, SLOT (slotSobel()));
+    connect(this->ui->btnDeFrangment, SIGNAL (released()),this, SLOT (slotDeFragment()));
     this->ui->qvtkWidget_Ori->repaint();
     this->ui->qvtkWidget_Seg->hide();
 }
@@ -596,6 +597,8 @@ void SimpleView::slotOpenFile()
     vtkimage->DeepCopy(flipYFilter->GetOutput());
 
     QImage img(InputFile);
+    ImgW = img.width();
+    ImgH = img.height();
     this->displayMyView(img, None);
     this->displayImage(vtkimage);
 
@@ -786,10 +789,42 @@ void SimpleView::region_growing(QString image_file, QString out_file, int seed_x
     tmp_image.readFromOtherOutput(regionGrow->GetOutput());
     tmp_image.writeImageToFile(out_file.toLatin1().data());
 }
+
+void SimpleView::slotDeFragment()
+{
+    RemoveFragments();
+}
+
 void SimpleView::slotTest()
 {
     cout << "spline bottom1 is :" << lowestY_x1 << "," << SplineY1[lowestY_x1]<<endl;
     cout << "spline bottom2 is :" << lowestY_x2 << "," << SplineY2[lowestY_x2]<<endl;
+    cout << "p1 is :" << lowestY_x2+15 << "," << SplineY2[lowestY_x2+15]<<endl;
+    cout << "p2 is :" << lowestY_x2-15 << "," << SplineY2[lowestY_x2-15]<<endl;
+    int line1x, line1y;
+    float slope1, slope2, diff = 2.0;
+    slope1 = (float)(SplineY2[lowestY_x2+15] - SplineY2[lowestY_x2-15]) / 30.0;
+    cout << "slope1 = " << slope1 << endl;
+    for(int x = 0; x < ImgW; x++)
+    {
+        slope2 = (float)(SplineY1[x] - SplineY2[lowestY_x2]) / (float)(x - lowestY_x2);
+        cout << "slope2 = " << slope2 << endl;
+        if ((float)abs(slope2 - ((-1.0)/slope1)) < diff)
+        {
+            diff = (float)abs(slope2 - ((-1.0)/slope1));
+            cout << "slope2 = " << slope2 << endl;
+            cout << "diff is : " << diff << endl;
+            line1x = x;
+            line1y = SplineY1[x];
+        }
+    }
+    cout << "line1xy is :" << line1x << "," << line1y<<endl;
+    QImage img(FILE_SPLINE);
+    QPainter pt(&img);
+    pt.setPen(Qt::green);
+    pt.drawLine(line1x,line1y, lowestY_x2,SplineY2[lowestY_x2] );
+    pt.end();
+    displayMyView(img, None);
 }
 
 void SimpleView::RemoveFragments()

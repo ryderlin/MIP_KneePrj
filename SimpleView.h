@@ -78,6 +78,7 @@ public slots:
   virtual void slotSpline();
   virtual void slotMerge();
   virtual void slotSobel();
+  virtual void slotDeFragment();
   virtual void displayImage(vtkImageData *image);
   virtual void displayImage2(vtkImageData *image);
   virtual void displayMyView(QImage img, ViewMode view_mode);
@@ -106,6 +107,7 @@ private:
   typedef itk::Image<unsigned char, dimension2D> uchar2D;
   uchar2D::Pointer OutImage;
   QString InputFile;
+  int ImgW, ImgH;
   //for recording two red splines' Y cordinates, because X will be sequential from 0 to width.
   int SplineY1[1000], SplineY2[1000];
   int lowestY_x1, lowestY_x2;
