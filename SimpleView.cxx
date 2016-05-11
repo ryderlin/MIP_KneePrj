@@ -795,34 +795,52 @@ void SimpleView::slotDeFragment()
     RemoveFragments();
 }
 
+int SimpleView::getThicknessPoint(int line2_x)
+{
+    //the upper spline point, for calculating the cartilage thickness
+    int line1x;
+    float slope1, slope2, diff = 10.0;
+    //find the center thickness
+    slope1 = (float)(SplineY2[line2_x+15] - SplineY2[line2_x-15]) / 30.0;
+    cout << "slope1 = " << slope1 << endl;
+    if (slope1 == 0.0)
+    {
+        line1x = line2_x;
+    }
+    else
+    {
+        for(int x = 0; x < ImgW; x++)
+        {
+            slope2 = (float)(SplineY1[x] - SplineY2[line2_x]) / (float)(x - line2_x);
+            if ((float)abs(slope2 - ((-1.0)/slope1)) < diff)
+            {
+                diff = (float)abs(slope2 - ((-1.0)/slope1));
+                cout << "slope2 = " << slope2 << endl;
+                cout << "diff is : " << diff << endl;
+                line1x = x;
+            }
+        }
+    }
+    cout << "line1xy is :" << line1x << "," << SplineY1[line1x]<<endl;
+    return line1x;
+}
+
 void SimpleView::slotTest()
 {
     cout << "spline bottom1 is :" << lowestY_x1 << "," << SplineY1[lowestY_x1]<<endl;
     cout << "spline bottom2 is :" << lowestY_x2 << "," << SplineY2[lowestY_x2]<<endl;
-    cout << "p1 is :" << lowestY_x2+15 << "," << SplineY2[lowestY_x2+15]<<endl;
-    cout << "p2 is :" << lowestY_x2-15 << "," << SplineY2[lowestY_x2-15]<<endl;
-    int line1x, line1y;
-    float slope1, slope2, diff = 2.0;
-    slope1 = (float)(SplineY2[lowestY_x2+15] - SplineY2[lowestY_x2-15]) / 30.0;
-    cout << "slope1 = " << slope1 << endl;
-    for(int x = 0; x < ImgW; x++)
-    {
-        slope2 = (float)(SplineY1[x] - SplineY2[lowestY_x2]) / (float)(x - lowestY_x2);
-        cout << "slope2 = " << slope2 << endl;
-        if ((float)abs(slope2 - ((-1.0)/slope1)) < diff)
-        {
-            diff = (float)abs(slope2 - ((-1.0)/slope1));
-            cout << "slope2 = " << slope2 << endl;
-            cout << "diff is : " << diff << endl;
-            line1x = x;
-            line1y = SplineY1[x];
-        }
-    }
-    cout << "line1xy is :" << line1x << "," << line1y<<endl;
+    int line1_center_x, line1_left_x, line1_right_x, line2_left_x, line2_right_x;
+    line2_left_x = lowestY_x2/3;
+    line2_right_x = lowestY_x2 + (ImgW-lowestY_x2)*2/3;
+    line1_center_x = getThicknessPoint(lowestY_x2);
+    line1_left_x = getThicknessPoint(line2_left_x);
+    line1_right_x = getThicknessPoint(line2_right_x);
     QImage img(FILE_SPLINE);
     QPainter pt(&img);
     pt.setPen(Qt::green);
-    pt.drawLine(line1x,line1y, lowestY_x2,SplineY2[lowestY_x2] );
+    pt.drawLine(line1_center_x,SplineY1[line1_center_x], lowestY_x2,SplineY2[lowestY_x2]);
+    pt.drawLine(line1_left_x,SplineY1[line1_left_x], line2_left_x,SplineY2[line2_left_x]);
+    pt.drawLine(line1_right_x,SplineY1[line1_right_x], line2_right_x,SplineY2[line2_right_x]);
     pt.end();
     displayMyView(img, None);
 }
@@ -1023,7 +1041,7 @@ void SimpleView::slotSpline()
             lowestY_x2 = col;
         }
     }
-    drawColorDot(&outImgC, qRgb(0,255,0),lowestY_x1, SplineY1[lowestY_x1]);
+    drawColorDot(&outImgC, qRgb(0,0,255),lowestY_x1, SplineY1[lowestY_x1]);
     drawColorDot(&outImgC, qRgb(0,255,0),lowestY_x2, SplineY2[lowestY_x2]);
     this->displayMyView(outImgC, None);
     outImgC.save(FILE_SPLINE);

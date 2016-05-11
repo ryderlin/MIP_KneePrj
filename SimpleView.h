@@ -96,6 +96,7 @@ private:
   void region_growing(QString image_file, QString out_file, int seed_x, int seed_y, int replaced_pixel);
   void Opening();
   void RemoveFragments();
+  int getThicknessPoint(int line2_x);
 
   //vtkImageViewer2 *viewer;
 
