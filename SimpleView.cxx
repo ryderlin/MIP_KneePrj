@@ -85,7 +85,7 @@ static QImage region_growing(QString image_file, QString out_file, int seed_x, i
     ReaderType::Pointer ITKImageReader;
     ITKImageReader = ReaderType::New();
     ITKImageReader->SetFileName(image_file.toLatin1().data());
-    typedef itk::NeighborhoodConnectedImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
+    typedef itk::ConnectedThresholdImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
     RegionGrowImageFilterType::Pointer regionGrow = RegionGrowImageFilterType::New();
     float lower = 0.0;
     float upper = 50.0;
@@ -696,7 +696,7 @@ bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexTyp
 
 void SimpleView::slotSobel()
 {
-    myImage2D.readFiletoImages(FILE_REMOVE_FRAGMENT);
+    myImage2D.readFiletoImages(FILE_SMOOTH_EDGE);
     //sobel
     typedef itk::Image<float, 2>          FloatImageType;
     typedef itk::SobelEdgeDetectionImageFilter <ImageType, FloatImageType>
@@ -827,6 +827,11 @@ int SimpleView::getThicknessPoint(int line2_x)
 
 void SimpleView::slotTest()
 {
+    SmoothEdge();
+}
+
+void SimpleView::drawThickness()
+{
     cout << "spline bottom1 is :" << lowestY_x1 << "," << SplineY1[lowestY_x1]<<endl;
     cout << "spline bottom2 is :" << lowestY_x2 << "," << SplineY2[lowestY_x2]<<endl;
     int line1_center_x, line1_left_x, line1_right_x, line2_left_x, line2_right_x;
@@ -910,12 +915,56 @@ void SimpleView::RemoveFragments()
     }
     out_img.save(FILE_REMOVE_FRAGMENT);
     displayMyView(out_img, None);
-    Opening();
+//    Opening();
 
 //    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
 //    this->ui->qvtkWidget_Seg->repaint();
 //    this->ui->qvtkWidget_Seg->show();
 
+}
+
+void SimpleView::SmoothEdge()
+{
+    ReaderType::Pointer ITKImageReader;
+    ITKImageReader = ReaderType::New();
+    ITKImageReader->SetFileName(FILE_REMOVE_FRAGMENT);
+    typedef itk::BinaryBallStructuringElement<ImageType::PixelType, ImageType::ImageDimension>
+                StructuringElementType;
+
+    StructuringElementType structuringElement;
+
+    typedef itk::BinaryErodeImageFilter<ImageType, ImageType, StructuringElementType>
+            BinaryErodeImageFilterType;
+    BinaryErodeImageFilterType::Pointer erodeFilter
+            = BinaryErodeImageFilterType::New();
+    typedef itk::BinaryDilateImageFilter<ImageType, ImageType, StructuringElementType>
+            BinaryDilateImageFilterType;
+    BinaryDilateImageFilterType::Pointer dilateFilter
+            = BinaryDilateImageFilterType::New();
+    //erode 2
+    structuringElement.SetRadius(2);
+    structuringElement.CreateStructuringElement();
+    erodeFilter->SetInput(ITKImageReader->GetOutput());
+    erodeFilter->SetKernel(structuringElement);
+    erodeFilter->Update();
+    //dilate 5
+    structuringElement.SetRadius(5);
+    structuringElement.CreateStructuringElement();
+    dilateFilter->SetInput(erodeFilter->GetOutput());
+    dilateFilter->SetKernel(structuringElement);
+    dilateFilter->Update();
+    //erode 3
+    structuringElement.SetRadius(3);
+    structuringElement.CreateStructuringElement();
+    erodeFilter->SetInput(dilateFilter->GetOutput());
+    erodeFilter->SetKernel(structuringElement);
+    erodeFilter->Update();
+    myImage2D.readFromOtherOutput(erodeFilter->GetOutput());
+    myImage2D.writeImageToFile(FILE_SMOOTH_EDGE);
+
+    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+    this->ui->qvtkWidget_Seg->repaint();
+    this->ui->qvtkWidget_Seg->show();
 }
 
 void SimpleView::Opening()

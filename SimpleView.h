@@ -29,6 +29,7 @@
 #define FILE_REGION_GROWING_TOP     OUT_FILE_DIR"region_growing_top.bmp"
 #define FILE_REGION_GROWING_BOT     OUT_FILE_DIR"region_growing_bot.bmp"
 #define FILE_REMOVE_FRAGMENT        OUT_FILE_DIR"remove_fragment.bmp"
+#define FILE_SMOOTH_EDGE            OUT_FILE_DIR"smooth_edge.bmp"
 
 #if 0//set rgb pixel
 typedef itk::RGBPixel<unsigned char> RGBPixelType;
@@ -95,6 +96,8 @@ private:
   vtkSmartPointer<vtkQtTableView> TableView;
   void region_growing(QString image_file, QString out_file, int seed_x, int seed_y, int replaced_pixel);
   void Opening();
+  void SmoothEdge();
+  void drawThickness();
   void RemoveFragments();
   int getThicknessPoint(int line2_x);
 
