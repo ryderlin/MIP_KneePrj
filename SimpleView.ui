@@ -434,8 +434,8 @@
    <widget class="QPushButton" name="btnSobel">
     <property name="geometry">
      <rect>
-      <x>950</x>
-      <y>70</y>
+      <x>830</x>
+      <y>90</y>
       <width>81</width>
       <height>41</height>
      </rect>
@@ -457,11 +457,11 @@
      <string/>
     </property>
    </widget>
-   <widget class="QLineEdit" name="leTestValue">
+   <widget class="QLineEdit" name="leSmoothArg1">
     <property name="geometry">
      <rect>
-      <x>970</x>
-      <y>30</y>
+      <x>980</x>
+      <y>0</y>
       <width>41</width>
       <height>31</height>
      </rect>
@@ -471,7 +471,7 @@
     <property name="geometry">
      <rect>
       <x>830</x>
-      <y>80</y>
+      <y>60</y>
       <width>99</width>
       <height>27</height>
      </rect>
@@ -484,7 +484,7 @@
     <property name="geometry">
      <rect>
       <x>830</x>
-      <y>40</y>
+      <y>30</y>
       <width>99</width>
       <height>27</height>
      </rect>
@@ -504,6 +504,40 @@
     </property>
     <property name="text">
      <string>remove fragment</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnSmooth">
+    <property name="geometry">
+     <rect>
+      <x>1030</x>
+      <y>20</y>
+      <width>131</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>smooth
+(erosion+dilation)</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="leSmoothArg2">
+    <property name="geometry">
+     <rect>
+      <x>980</x>
+      <y>30</y>
+      <width>41</width>
+      <height>31</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="leSmoothArg3">
+    <property name="geometry">
+     <rect>
+      <x>980</x>
+      <y>60</y>
+      <width>41</width>
+      <height>31</height>
+     </rect>
     </property>
    </widget>
   </widget>

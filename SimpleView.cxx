@@ -85,7 +85,7 @@ static QImage region_growing(QString image_file, QString out_file, int seed_x, i
     ReaderType::Pointer ITKImageReader;
     ITKImageReader = ReaderType::New();
     ITKImageReader->SetFileName(image_file.toLatin1().data());
-    typedef itk::ConnectedThresholdImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
+    typedef itk::NeighborhoodConnectedImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
     RegionGrowImageFilterType::Pointer regionGrow = RegionGrowImageFilterType::New();
     float lower = 0.0;
     float upper = 50.0;
@@ -480,6 +480,7 @@ SimpleView::SimpleView()
     connect(this->ui->btnMerge, SIGNAL (released()),this, SLOT (slotMerge()));
     connect(this->ui->btnSobel, SIGNAL (released()),this, SLOT (slotSobel()));
     connect(this->ui->btnDeFrangment, SIGNAL (released()),this, SLOT (slotDeFragment()));
+    connect(this->ui->btnSmooth, SIGNAL (released()),this, SLOT (slotSmoothEdge()));
     this->ui->qvtkWidget_Ori->repaint();
     this->ui->qvtkWidget_Seg->hide();
 }
@@ -571,6 +572,7 @@ void SimpleView::slotOpenFile()
     }
 #endif
     myImage2D.readFromOtherOutput(reader->GetOutput());
+//    slotRunAD();
 //    myImage2D.writeImageToFile("dicom_test.jpg");
 #endif
     /***** 變數設定 *****/
@@ -599,7 +601,7 @@ void SimpleView::slotOpenFile()
     QImage img(InputFile);
     ImgW = img.width();
     ImgH = img.height();
-    this->displayMyView(img, None);
+//    this->displayMyView(img, None);
     this->displayImage(vtkimage);
 
     reader = NULL;
@@ -632,9 +634,9 @@ void SimpleView::slotRunAD()
             OutputImageType > FilterType;
     FilterType::Pointer filter = FilterType::New();
     filter->SetInput( myImage2D.originalImages());
-    filter->SetNumberOfIterations(this->ui->leAD_Iteration->text().toDouble());
+    filter->SetNumberOfIterations(5.0/*this->ui->leAD_Iteration->text().toDouble()*/);
     filter->SetTimeStep( 0.125 );
-    filter->SetConductanceParameter(this->ui->leAD_Conductance->text().toDouble());
+    filter->SetConductanceParameter(5.0/*this->ui->leAD_Conductance->text().toDouble()*/);
 
     //convert output from float to uchar2d
     typedef itk::RescaleIntensityImageFilter<OutputImageType, InputImageType> RescaleType;
@@ -724,7 +726,7 @@ void SimpleView::slotSobel()
         for(row = 0; row < outImgC.height(); row++)
         {
             QRgb rgb = inImg.pixel(col, row);
-            if(qRed(rgb) > this->ui->leTestValue->text().toInt())
+            if(qRed(rgb) > 0/*this->ui->leTestValue->text().toInt()*/)
             {
                 outImgC.setPixel(col, row, qRgb(255, 0, 0));
             }
@@ -827,7 +829,15 @@ int SimpleView::getThicknessPoint(int line2_x)
 
 void SimpleView::slotTest()
 {
-    SmoothEdge();
+    drawThickness();
+}
+
+QString SimpleView::getDistanceInfo(int x1, int y1, int x2, int y2)
+{
+    QString distance_info;
+    double distance = sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
+    distance_info.sprintf("(%d,%d)to(%d,%d)=\n%lf",x1,y1,x2,y2, distance);
+    return distance_info;
 }
 
 void SimpleView::drawThickness()
@@ -842,10 +852,32 @@ void SimpleView::drawThickness()
     line1_right_x = getThicknessPoint(line2_right_x);
     QImage img(FILE_SPLINE);
     QPainter pt(&img);
+    int x1, y1, x2, y2;
+    QString distance_info;
     pt.setPen(Qt::green);
-    pt.drawLine(line1_center_x,SplineY1[line1_center_x], lowestY_x2,SplineY2[lowestY_x2]);
-    pt.drawLine(line1_left_x,SplineY1[line1_left_x], line2_left_x,SplineY2[line2_left_x]);
+
+    //draw center and distance info
+    x1 = line1_center_x;    y1 = SplineY1[line1_center_x];
+    x2 = lowestY_x2;        y2 = SplineY2[lowestY_x2];
+    distance_info = getDistanceInfo(x1,y1, x2,y2);
+    pt.drawLine(x1,y1, x2,y2);
+    pt.drawText(QRect(x1-100, y1-50, 200, 50),Qt::AlignCenter,distance_info);
+
+    //draw left and distance info
+    x1 = line1_left_x;      y1 = SplineY1[line1_left_x];
+    x2 = line2_left_x;      y2 = SplineY2[line2_left_x];
+    distance_info = getDistanceInfo(x1,y1, x2,y2);
+    pt.drawLine(x1,y1, x2,y2);
+    pt.drawText(QRect(x1-100, y1-50, 200, 50),Qt::AlignCenter,distance_info);
+
+    //draw right and distance info
     pt.drawLine(line1_right_x,SplineY1[line1_right_x], line2_right_x,SplineY2[line2_right_x]);
+    x1 = line1_right_x;      y1 = SplineY1[line1_right_x];
+    x2 = line2_right_x;      y2 = SplineY2[line2_right_x];
+    distance_info = getDistanceInfo(x1,y1, x2,y2);
+    pt.drawLine(x1,y1, x2,y2);
+    pt.drawText(QRect(x1-100, y1-50, 200, 50),Qt::AlignCenter,distance_info);
+
     pt.end();
     displayMyView(img, None);
 }
@@ -923,7 +955,7 @@ void SimpleView::RemoveFragments()
 
 }
 
-void SimpleView::SmoothEdge()
+void SimpleView::slotSmoothEdge()
 {
     ReaderType::Pointer ITKImageReader;
     ITKImageReader = ReaderType::New();
@@ -942,19 +974,19 @@ void SimpleView::SmoothEdge()
     BinaryDilateImageFilterType::Pointer dilateFilter
             = BinaryDilateImageFilterType::New();
     //erode 2
-    structuringElement.SetRadius(2);
+    structuringElement.SetRadius(this->ui->leSmoothArg1->text().toInt());
     structuringElement.CreateStructuringElement();
     erodeFilter->SetInput(ITKImageReader->GetOutput());
     erodeFilter->SetKernel(structuringElement);
     erodeFilter->Update();
     //dilate 5
-    structuringElement.SetRadius(5);
+    structuringElement.SetRadius(this->ui->leSmoothArg2->text().toInt());
     structuringElement.CreateStructuringElement();
     dilateFilter->SetInput(erodeFilter->GetOutput());
     dilateFilter->SetKernel(structuringElement);
     dilateFilter->Update();
     //erode 3
-    structuringElement.SetRadius(3);
+    structuringElement.SetRadius(this->ui->leSmoothArg3->text().toInt());
     structuringElement.CreateStructuringElement();
     erodeFilter->SetInput(dilateFilter->GetOutput());
     erodeFilter->SetKernel(structuringElement);
@@ -1094,85 +1126,6 @@ void SimpleView::slotSpline()
     drawColorDot(&outImgC, qRgb(0,255,0),lowestY_x2, SplineY2[lowestY_x2]);
     this->displayMyView(outImgC, None);
     outImgC.save(FILE_SPLINE);
-#endif
-#if 0//test for addimage filter
-    typedef itk::ImageFileReader<ImageType> ReaderType;
-    ReaderType::Pointer reader = ReaderType::New();
-    reader->SetFileName("/home/ryderlin/Documents/001.bmp");
-    reader->Update();
-
-    ReaderType::Pointer reader1 = ReaderType::New();
-    reader1->SetFileName(FILE_SOBEL_RED);
-    reader1->Update();
-    typedef itk::AddImageFilter <ImageType, ImageType >
-            AddImageFilterType;
-
-    AddImageFilterType::Pointer addFilter
-            = AddImageFilterType::New ();
-    addFilter->SetInput1(reader->GetOutput());
-    addFilter->SetInput2(reader1->GetOutput());
-    addFilter->Update();
-    myImage2D.readFromOtherImage(addFilter->GetOutput());
-    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    this->ui->qvtkWidget_Seg->repaint();
-    this->ui->qvtkWidget_Seg->show();
-#endif
-#if 0   //temp test for finding an edge from image center to up
-    ImageType::Pointer seg_image = myImage2D.originalImages();
-    int w = seg_image->GetLargestPossibleRegion().GetSize()[0];
-    int h = seg_image->GetLargestPossibleRegion().GetSize()[1];
-    ImageType::IndexType pixelIndex;
-    signed short pixel_value;
-    bool b1 = false;
-    //    int paint_cnt = 0;
-
-    std::cout << "size is " << w << " x " << h << endl;
-    for (int x = 200; x < w; x++)
-    {
-        //        paint_cnt = 0;
-        for (int y = h/2; y > 0; y--)
-        {
-            pixelIndex[0] = x;
-            pixelIndex[1] = y;
-            pixel_value = seg_image->GetPixel(pixelIndex);
-            if(pixel_value > 100)
-                b1 = true;
-            else
-                b1 = false;
-
-            if(b1 && up_pixel_same(seg_image, pixelIndex, pixel_value))
-            {
-                for (int i = 0; i < 5; i++)
-                {
-                    pixelIndex[1] = pixelIndex[1] - i;
-                    seg_image->SetPixel(pixelIndex, 255);
-                }
-                y = 0;
-            }
-        }
-    }
-    //    for (int x = 0; x < w; x++)
-    //    {
-    //        pixelIndex[0] = x;
-    //        pixelIndex[1] = h/5;
-    //        seg_image->SetPixel(pixelIndex, 255);
-    //    }
-    myImage2D.readFromOtherImage(seg_image);
-    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    this->ui->qvtkWidget_Seg->repaint();
-    this->ui->qvtkWidget_Seg->show();
-    //    ImageType::IndexType pixelIndex;
-    //    signed short pixel_value;
-    //    for (int c = 0; c < 800;  c++)
-    //    {
-    //        pixelIndex[0] = 580;
-    //        pixelIndex[1] = c;
-    //        pixel_value = reader->GetOutput()->GetPixel(pixelIndex);
-    //        std::cout << "pixel before is : " << pixel_value;
-    //        reader->GetOutput()->SetPixel(pixelIndex, 255);
-    //        pixel_value = reader->GetOutput()->GetPixel(pixelIndex);
-    //        std::cout << "pixel after  is : " << pixel_value;
-    //    }
 #endif
 }
 

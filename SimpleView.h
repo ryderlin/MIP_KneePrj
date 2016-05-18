@@ -80,6 +80,7 @@ public slots:
   virtual void slotMerge();
   virtual void slotSobel();
   virtual void slotDeFragment();
+  virtual void slotSmoothEdge();
   virtual void displayImage(vtkImageData *image);
   virtual void displayImage2(vtkImageData *image);
   virtual void displayMyView(QImage img, ViewMode view_mode);
@@ -96,10 +97,10 @@ private:
   vtkSmartPointer<vtkQtTableView> TableView;
   void region_growing(QString image_file, QString out_file, int seed_x, int seed_y, int replaced_pixel);
   void Opening();
-  void SmoothEdge();
   void drawThickness();
   void RemoveFragments();
   int getThicknessPoint(int line2_x);
+  QString getDistanceInfo(int x1, int y1, int x2, int y2);
 
   //vtkImageViewer2 *viewer;
 
