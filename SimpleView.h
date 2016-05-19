@@ -101,6 +101,7 @@ private:
   void RemoveFragments();
   int getThicknessPoint(int line2_x);
   QString getDistanceInfo(int x1, int y1, int x2, int y2);
+  QString getDistanceInfo(int x);
 
   //vtkImageViewer2 *viewer;
 

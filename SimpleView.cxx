@@ -804,7 +804,7 @@ int SimpleView::getThicknessPoint(int line2_x)
     float slope1, slope2, diff = 10.0;
     //find the center thickness
     slope1 = (float)(SplineY2[line2_x+15] - SplineY2[line2_x-15]) / 30.0;
-    cout << "slope1 = " << slope1 << endl;
+//    cout << "slope1 = " << slope1 << endl;
     if (slope1 == 0.0)
     {
         line1x = line2_x;
@@ -817,13 +817,13 @@ int SimpleView::getThicknessPoint(int line2_x)
             if ((float)abs(slope2 - ((-1.0)/slope1)) < diff)
             {
                 diff = (float)abs(slope2 - ((-1.0)/slope1));
-                cout << "slope2 = " << slope2 << endl;
-                cout << "diff is : " << diff << endl;
+//                cout << "slope2 = " << slope2 << endl;
+//                cout << "diff is : " << diff << endl;
                 line1x = x;
             }
         }
     }
-    cout << "line1xy is :" << line1x << "," << SplineY1[line1x]<<endl;
+//    cout << "line1xy is :" << line1x << "," << SplineY1[line1x]<<endl;
     return line1x;
 }
 
@@ -835,8 +835,28 @@ void SimpleView::slotTest()
 QString SimpleView::getDistanceInfo(int x1, int y1, int x2, int y2)
 {
     QString distance_info;
+    //find 5 distances around the given point, then calculate the mean distance
     double distance = sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
     distance_info.sprintf("(%d,%d)to(%d,%d)=\n%lf",x1,y1,x2,y2, distance);
+    return distance_info;
+}
+
+QString SimpleView::getDistanceInfo(int x)
+{
+    QString distance_info;
+    //find 5 distances around the given point, then calculate the mean distance
+    double distance = 0;
+    int x1[5], x2[5], offset = 3;
+    for(int i = 0; i < 5; i++)
+    {
+        x2[i] = x+(i-2)*offset;
+        x1[i] = getThicknessPoint(x2[i]);
+        cout << "(x1,y1) = (" << x1[i] << "," << SplineY1[x1[i]] << ")" << endl;
+        cout << "(x2,y2) = (" << x2[i] << "," << SplineY2[x2[i]] << ")" << endl;
+        distance += sqrt(pow(x2[i] - x1[i], 2) + pow(SplineY2[x2[i]] - SplineY1[x1[i]], 2));
+    }
+    distance = distance / 5.0;
+    distance_info.sprintf("!(%d,%d)to(%d,%d)=\n%lf",x1[2],SplineY1[x1[2]],x2[2],SplineY2[x2[2]], distance);
     return distance_info;
 }
 
@@ -859,14 +879,14 @@ void SimpleView::drawThickness()
     //draw center and distance info
     x1 = line1_center_x;    y1 = SplineY1[line1_center_x];
     x2 = lowestY_x2;        y2 = SplineY2[lowestY_x2];
-    distance_info = getDistanceInfo(x1,y1, x2,y2);
+    distance_info = getDistanceInfo(x2);
     pt.drawLine(x1,y1, x2,y2);
     pt.drawText(QRect(x1-100, y1-50, 200, 50),Qt::AlignCenter,distance_info);
 
     //draw left and distance info
     x1 = line1_left_x;      y1 = SplineY1[line1_left_x];
     x2 = line2_left_x;      y2 = SplineY2[line2_left_x];
-    distance_info = getDistanceInfo(x1,y1, x2,y2);
+    distance_info = getDistanceInfo(x2);
     pt.drawLine(x1,y1, x2,y2);
     pt.drawText(QRect(x1-100, y1-50, 200, 50),Qt::AlignCenter,distance_info);
 
@@ -874,7 +894,7 @@ void SimpleView::drawThickness()
     pt.drawLine(line1_right_x,SplineY1[line1_right_x], line2_right_x,SplineY2[line2_right_x]);
     x1 = line1_right_x;      y1 = SplineY1[line1_right_x];
     x2 = line2_right_x;      y2 = SplineY2[line2_right_x];
-    distance_info = getDistanceInfo(x1,y1, x2,y2);
+    distance_info = getDistanceInfo(x2);
     pt.drawLine(x1,y1, x2,y2);
     pt.drawText(QRect(x1-100, y1-50, 200, 50),Qt::AlignCenter,distance_info);
 
