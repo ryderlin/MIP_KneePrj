@@ -635,7 +635,7 @@ void SimpleView::slotRunAD()
     FilterType::Pointer filter = FilterType::New();
     filter->SetInput( myImage2D.originalImages());
     filter->SetNumberOfIterations(5.0/*this->ui->leAD_Iteration->text().toDouble()*/);
-    filter->SetTimeStep( 0.125 );
+    filter->SetTimeStep( 0.25 );
     filter->SetConductanceParameter(5.0/*this->ui->leAD_Conductance->text().toDouble()*/);
 
     //convert output from float to uchar2d
@@ -698,7 +698,11 @@ bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexTyp
 
 void SimpleView::slotSobel()
 {
+#if 1 //escape the remove fragment step
+    myImage2D.readFiletoImages(FILE_REGION_GROWING);
+#else
     myImage2D.readFiletoImages(FILE_SMOOTH_EDGE);
+#endif
     //sobel
     typedef itk::Image<float, 2>          FloatImageType;
     typedef itk::SobelEdgeDetectionImageFilter <ImageType, FloatImageType>
@@ -771,7 +775,7 @@ void SimpleView::region_growing(QString image_file, QString out_file, int seed_x
     ReaderType::Pointer ITKImageReader;
     ITKImageReader = ReaderType::New();
     ITKImageReader->SetFileName(image_file.toLatin1().data());
-    typedef itk::NeighborhoodConnectedImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
+    typedef itk::ConnectedThresholdImageFilter<ImageType, ImageType> RegionGrowImageFilterType;
     RegionGrowImageFilterType::Pointer regionGrow = RegionGrowImageFilterType::New();
     float lower = 0.0;
     float upper = 50.0;
@@ -846,7 +850,7 @@ QString SimpleView::getDistanceInfo(int x)
     QString distance_info;
     //find 5 distances around the given point, then calculate the mean distance
     double distance = 0;
-    int x1[5], x2[5], offset = 3;
+    int x1[5], x2[5], offset = 1;
     for(int i = 0; i < 5; i++)
     {
         x2[i] = x+(i-2)*offset;
@@ -1013,6 +1017,8 @@ void SimpleView::slotSmoothEdge()
     erodeFilter->Update();
     myImage2D.readFromOtherOutput(erodeFilter->GetOutput());
     myImage2D.writeImageToFile(FILE_SMOOTH_EDGE);
+    QImage img(FILE_SMOOTH_EDGE);
+    displayMyView(img, None);
 
     this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
     this->ui->qvtkWidget_Seg->repaint();
@@ -1072,7 +1078,7 @@ void SimpleView::slotSpline()
     int last_red_y1 = -1, last_red_x1 = -1;
     int last_red_y2 = -1, last_red_x2 = -1;
     float slope = 0.0;
-    for(int x = 0; x < inImg.width(); x += 15)
+    for(int x = 0; x < inImg.width(); x += 20)
     {
         for(int y = 0; y < inImg.height(); y++)
         {
@@ -1084,7 +1090,7 @@ void SimpleView::slotSpline()
                 cout<<"(x,y) = ("<<x<<","<<y<<")";
                 cout<<"(last_red_x1, last_red_y1) = ("<<last_red_x1<<","<<last_red_y1<<")";
                 cout<<"slope = "<<slope<<endl;
-                if(last_red_y1 == -1 || slope < 0.6)
+                if(last_red_y1 == -1 || slope < 0.5)
                 {
                     x1.push_back(x);
                     y1.push_back(y);
