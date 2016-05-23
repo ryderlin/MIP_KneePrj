@@ -26,6 +26,7 @@
 #include "itkJPEGImageIOFactory.h"
 #include "itkGradientAnisotropicDiffusionImageFilter.h"
 #include "itkSobelEdgeDetectionImageFilter.h"
+#include "itkCannyEdgeDetectionImageFilter.h"
 #include "itkSigmoidImageFilter.h"
 #include "itkAddImageFilter.h"
 #include "itkRegionGrowImageFilter.h"
@@ -1069,6 +1070,15 @@ void SimpleView::Opening()
 
 void SimpleView::slotSpline()
 {
+#if 1 //the difference of 2 slope must < a constant
+    drawSpline1();
+#else
+    drawSpline();
+#endif
+}
+
+void SimpleView::drawSpline()
+{
 #if 1 //test
     QImage inImg = QImage(FILE_SOBEL_RED);
     QImage outImg = QImage(InputFile.toLatin1().data());
@@ -1090,7 +1100,7 @@ void SimpleView::slotSpline()
                 cout<<"(x,y) = ("<<x<<","<<y<<")";
                 cout<<"(last_red_x1, last_red_y1) = ("<<last_red_x1<<","<<last_red_y1<<")";
                 cout<<"slope = "<<slope<<endl;
-                if(last_red_y1 == -1 || slope < 0.5)
+                if(last_red_y1 == -1 || slope < 0.6)
                 {
                     x1.push_back(x);
                     y1.push_back(y);
@@ -1153,6 +1163,119 @@ void SimpleView::slotSpline()
     this->displayMyView(outImgC, None);
     outImgC.save(FILE_SPLINE);
 #endif
+}
+
+void SimpleView::drawSpline1()
+{
+    QImage inImg = QImage(FILE_SOBEL_RED);
+    QImage outImg = QImage(InputFile.toLatin1().data());
+    QImage outImgC = outImg.convertToFormat(QImage::Format_RGB888);
+    std::vector<double> sp_x1, sp_y1, sp_x2, sp_y2;
+    tk::spline s1, s2;
+    int last_red_y1 = -1, last_red_x1 = -1;
+    int last_red_y2 = -1, last_red_x2 = -1;
+    float slope = 0.0, old_slope = 0.0;
+    for(int x = 0; x < inImg.width(); x += 20)
+    {
+        for(int y = 0; y < inImg.height(); y++)
+        {
+            QRgb rgb = inImg.pixel(x, y);
+            if(qRed(rgb) >=255)
+            {
+                slope = (float)(y-last_red_y1) / (float)(x-last_red_x1);
+                cout<<"(x,y) = ("<<x<<","<<y<<")";
+                cout<<", (last_red_x1, last_red_y1) = ("<<last_red_x1<<","<<last_red_y1<<")";
+                cout<<", slope = "<<slope;
+                cout<<", old_slope = "<<old_slope<<endl;
+
+                if(last_red_y1 == -1 || //must sample first point
+                   last_red_x1 == 0  || //must sample second point, let the old_slope be correct
+                   fabs(slope-old_slope) < 0.6)
+                {
+                    sp_x1.push_back(x);
+                    sp_y1.push_back(y);
+                    drawColorDot(&inImg,qRgb(0,255,0), x, y);
+                    last_red_x1 = x;
+                    last_red_y1 = y;
+                    old_slope = slope;
+                }
+                break;
+            }
+        }
+        //find top line of the bottom edge
+        int y2 = 0, y_use = 0, y_cnt = 0;
+        for(int y = inImg.height()-1; y >= 0; y--)
+        {
+            QRgb rgb = inImg.pixel(x, y);
+            if(qRed(rgb) >=255)
+            {
+                y_cnt ++;
+                for (int i = y-5; i >=0; i-=2)
+                {
+                    QRgb t_rgb = inImg.pixel(x, i);
+                    if(qRed(t_rgb) >=255)
+                    {
+                        y_cnt ++;
+                        if (y_cnt == 2) y2 = i; //remember the line2's Y cordinate
+                        cout<<"(x,y) = ("<<x<<","<<y<<")";
+                        cout<<"(x,i) = ("<<x<<","<<i<<")";
+                        cout<<"y_cnt = "<<y_cnt<<endl;
+                    }
+                }
+                if (y_cnt >= 3) //means total >= 3 lines, but I needs line2
+                {
+                    y_use = y2;
+                }
+                else if (y_cnt == 2) //means total has 2 lines, but I needs line1
+                {
+                    y_use = y;
+                }
+
+                slope = (float)(y_use-last_red_y2) / (float)(x-last_red_x2);
+                if(last_red_y2 == -1 ||
+                   last_red_x2 == 0  ||
+                   fabs(slope-old_slope) < 0.6)
+                {
+                    sp_x2.push_back(x);
+                    sp_y2.push_back(y_use);
+                    drawColorDot(&inImg,qRgb(0,0,255), x, y_use);
+                    last_red_x2 = x;
+                    last_red_y2 = y_use;
+                    old_slope = slope;
+                }
+                break;
+            }
+        }
+    }
+    inImg.save(FILE_SPLINE_SAMPLE);
+    s1.set_points(sp_x1,sp_y1);
+    s2.set_points(sp_x2,sp_y2);
+    memset(SplineY1, 0, sizeof(SplineY1));
+    memset(SplineY2, 0, sizeof(SplineY2));
+    lowestY_x1 = lowestY_x2 = 0;
+    int max_y1 = 0, max_y2 = 0;
+    for (int col = 0; col<outImgC.width(); col++)
+    {
+        outImgC.setPixel(col, (int)s1((double)col), qRgb(255, 0, 0));
+        outImgC.setPixel(col, (int)s2((double)col), qRgb(255, 0, 0));
+        //recording the 2 spline cordinates, and lowestY_x1, lowestY_x2
+        SplineY1[col] = (int)s1((double)col);
+        SplineY2[col] = (int)s2((double)col);
+        if (SplineY1[col] > max_y1)
+        {
+            max_y1 = SplineY1[col];
+            lowestY_x1 = col;
+        }
+        if (SplineY2[col] > max_y2)
+        {
+            max_y2 = SplineY2[col];
+            lowestY_x2 = col;
+        }
+    }
+    drawColorDot(&outImgC, qRgb(0,0,255),lowestY_x1, SplineY1[lowestY_x1]);
+    drawColorDot(&outImgC, qRgb(0,255,0),lowestY_x2, SplineY2[lowestY_x2]);
+    this->displayMyView(outImgC, None);
+    outImgC.save(FILE_SPLINE);
 }
 
 void SimpleView::slotExit() {

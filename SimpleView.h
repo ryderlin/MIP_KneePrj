@@ -98,6 +98,8 @@ private:
   void region_growing(QString image_file, QString out_file, int seed_x, int seed_y, int replaced_pixel);
   void Opening();
   void drawThickness();
+  void drawSpline();
+  void drawSpline1();
   void RemoveFragments();
   int getThicknessPoint(int line2_x);
   QString getDistanceInfo(int x1, int y1, int x2, int y2);
