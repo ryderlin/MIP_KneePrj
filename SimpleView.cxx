@@ -1190,11 +1190,11 @@ void SimpleView::drawSpline1()
 
                 if(last_red_y1 == -1 || //must sample first point
                    last_red_x1 == 0  || //must sample second point, let the old_slope be correct
-                   fabs(slope-old_slope) < 0.6)
+                   fabs(slope-old_slope) < 0.55)
                 {
                     sp_x1.push_back(x);
                     sp_y1.push_back(y);
-                    drawColorDot(&inImg,qRgb(0,255,0), x, y);
+                    drawColorDot(&inImg,qRgb(255,255,0), x, y);
                     last_red_x1 = x;
                     last_red_y1 = y;
                     old_slope = slope;
@@ -1204,22 +1204,24 @@ void SimpleView::drawSpline1()
         }
         //find top line of the bottom edge
         int y2 = 0, y_use = 0, y_cnt = 0;
+        bool every_white = false;
         for(int y = inImg.height()-1; y >= 0; y--)
         {
             QRgb rgb = inImg.pixel(x, y);
             if(qRed(rgb) >=255)
             {
                 y_cnt ++;
-                for (int i = y-5; i >=0; i-=2)
+                cout<<"(x,y) = ("<<x<<","<<y<<")";
+                for (int i = y; i >=0; i-=2)
                 {
                     QRgb t_rgb = inImg.pixel(x, i);
-                    if(qRed(t_rgb) >=255)
+                    if (qGreen(t_rgb) > 0) every_white = true;
+                    if(qRed(t_rgb) >=255 && every_white)
                     {
                         y_cnt ++;
                         if (y_cnt == 2) y2 = i; //remember the line2's Y cordinate
-                        cout<<"(x,y) = ("<<x<<","<<y<<")";
-                        cout<<"(x,i) = ("<<x<<","<<i<<")";
-                        cout<<"y_cnt = "<<y_cnt<<endl;
+                        cout<<", (x,i) = ("<<x<<","<<i<<")";
+                        cout<<", y_cnt = "<<y_cnt<<endl;
                     }
                 }
                 if (y_cnt >= 3) //means total >= 3 lines, but I needs line2
@@ -1230,15 +1232,17 @@ void SimpleView::drawSpline1()
                 {
                     y_use = y;
                 }
+                cout<<"(x,y_use) = ("<<x<<","<<y_use<<")";
+                cout<<", y_cnt = "<<y_cnt<<endl;
 
                 slope = (float)(y_use-last_red_y2) / (float)(x-last_red_x2);
                 if(last_red_y2 == -1 ||
                    last_red_x2 == 0  ||
-                   fabs(slope-old_slope) < 0.6)
+                   fabs(slope-old_slope) < 0.55)
                 {
                     sp_x2.push_back(x);
                     sp_y2.push_back(y_use);
-                    drawColorDot(&inImg,qRgb(0,0,255), x, y_use);
+                    drawColorDot(&inImg,qRgb(255,0,255), x, y_use);
                     last_red_x2 = x;
                     last_red_y2 = y_use;
                     old_slope = slope;
