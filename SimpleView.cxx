@@ -619,6 +619,7 @@ void SimpleView::slotRunMrf()
     mySeg.setParameter(this->ui->leIterationNum->text().toInt());
     kmeanImage.readFromOtherImage(mySeg.kmeanMethod2D( myImage2D.castsignedShort2D())) ;
     myImage2D.readFromOtherImage(  mySeg.markovMethod2D( myImage2D.castsignedShort2D(), kmeanImage.originalImages()  )  );
+    myImage2D.writeImageToFile(FILE_MRF);
     this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
     this->ui->qvtkWidget_Seg->repaint();
     this->ui->qvtkWidget_Seg->show();
@@ -743,8 +744,7 @@ void SimpleView::slotSobel()
 
 void SimpleView::slotMerge()
 {
-    myImage2D.writeImageToFile(FILE_MRF_MERGE);
-    QImage inImg(FILE_MRF_MERGE);
+    QImage inImg(FILE_MRF);
     int Original_Image_Height = inImg.height();
     int Original_Image_Width = inImg.width();
     float ClassNumber;                                 //the number of classes used by MRF
@@ -1174,7 +1174,7 @@ void SimpleView::drawSpline1()
     tk::spline s1, s2;
     int last_red_y1 = -1, last_red_x1 = -1;
     int last_red_y2 = -1, last_red_x2 = -1;
-    float slope = 0.0, old_slope = 0.0;
+    float slope = 0.0, old_slope1 = 0.0, old_slope2 = 0.0;
     for(int x = 0; x < inImg.width(); x += 20)
     {
         for(int y = 0; y < inImg.height(); y++)
@@ -1182,22 +1182,26 @@ void SimpleView::drawSpline1()
             QRgb rgb = inImg.pixel(x, y);
             if(qRed(rgb) >=255)
             {
-                slope = (float)(y-last_red_y1) / (float)(x-last_red_x1);
+                slope = fabs((float)(y-last_red_y1) / (float)(x-last_red_x1));
+                cout<<"############Line1\n";
                 cout<<"(x,y) = ("<<x<<","<<y<<")";
                 cout<<", (last_red_x1, last_red_y1) = ("<<last_red_x1<<","<<last_red_y1<<")";
                 cout<<", slope = "<<slope;
-                cout<<", old_slope = "<<old_slope<<endl;
+                cout<<", old_slope1 = "<<old_slope1<<endl;
 
                 if(last_red_y1 == -1 || //must sample first point
-                   last_red_x1 == 0  || //must sample second point, let the old_slope be correct
-                   fabs(slope-old_slope) < 0.55)
+                   last_red_x1 == 0  || //must sample second point, let the old_slope1 be correct
+                   //the diffefenct of 2 slope must < 0.6 && itself must < 0.6
+                   fabs(slope-old_slope1) < 0.6 && fabs(slope) < 0.65 ||
+                   //slope begin to going up && can not going up too much (< 0.6)
+                   (slope < 0 && old_slope1 > 0) && fabs(slope) < 0.6)
                 {
                     sp_x1.push_back(x);
                     sp_y1.push_back(y);
                     drawColorDot(&inImg,qRgb(255,255,0), x, y);
                     last_red_x1 = x;
                     last_red_y1 = y;
-                    old_slope = slope;
+                    old_slope1 = slope;
                 }
                 break;
             }
@@ -1211,6 +1215,7 @@ void SimpleView::drawSpline1()
             if(qRed(rgb) >=255)
             {
                 y_cnt ++;
+                cout<<"############Line2\n";
                 cout<<"(x,y) = ("<<x<<","<<y<<")";
                 for (int i = y; i >=0; i-=2)
                 {
@@ -1232,20 +1237,26 @@ void SimpleView::drawSpline1()
                 {
                     y_use = y;
                 }
-                cout<<"(x,y_use) = ("<<x<<","<<y_use<<")";
                 cout<<", y_cnt = "<<y_cnt<<endl;
 
                 slope = (float)(y_use-last_red_y2) / (float)(x-last_red_x2);
+                cout<<"(x,y_use) = ("<<x<<","<<y_use<<")";
+                cout<<", (last_red_x2, last_red_y2) = ("<<last_red_x2<<","<<last_red_y2<<")";
+                cout<<", slope = "<<slope;
+                cout<<", old_slope2 = "<<old_slope2<<endl;
                 if(last_red_y2 == -1 ||
                    last_red_x2 == 0  ||
-                   fabs(slope-old_slope) < 0.55)
+                   //the diffefenct of 2 slope must < 0.6 && itself must < 0.6
+                   fabs(slope-old_slope2) < 0.6  && fabs(slope) < 0.65 ||
+                   //slope begin to going up && can not going up too much (< 0.6)
+                   (slope < 0 && old_slope2 > 0) && fabs(slope) < 0.6)
                 {
                     sp_x2.push_back(x);
                     sp_y2.push_back(y_use);
-                    drawColorDot(&inImg,qRgb(255,0,255), x, y_use);
+                    drawColorDot(&inImg,qRgb(0,255,0), x, y_use);
                     last_red_x2 = x;
                     last_red_y2 = y_use;
-                    old_slope = slope;
+                    old_slope2 = slope;
                 }
                 break;
             }

@@ -30,6 +30,7 @@
 #define FILE_REGION_GROWING_BOT     OUT_FILE_DIR"region_growing_bot.bmp"
 #define FILE_REMOVE_FRAGMENT        OUT_FILE_DIR"remove_fragment.bmp"
 #define FILE_SMOOTH_EDGE            OUT_FILE_DIR"smooth_edge.bmp"
+#define FILE_MRF                    OUT_FILE_DIR"KneeOut_MRF.bmp"
 
 #if 0//set rgb pixel
 typedef itk::RGBPixel<unsigned char> RGBPixelType;
