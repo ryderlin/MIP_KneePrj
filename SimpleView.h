@@ -31,6 +31,7 @@
 #define FILE_REMOVE_FRAGMENT        OUT_FILE_DIR"remove_fragment.bmp"
 #define FILE_SMOOTH_EDGE            OUT_FILE_DIR"smooth_edge.bmp"
 #define FILE_MRF                    OUT_FILE_DIR"KneeOut_MRF.bmp"
+#define FILE_THICKNESS              OUT_FILE_DIR"KneeOut_Thickness.bmp"
 
 #if 0//set rgb pixel
 typedef itk::RGBPixel<unsigned char> RGBPixelType;
@@ -40,6 +41,9 @@ typedef itk::Image<unsigned char,2> ImageType;
 #endif
 typedef itk::ImageFileReader<ImageType> ReaderType;
 typedef itk::ImageFileWriter<ImageType> WriterType;
+static const int  dimension2D= 2;
+typedef itk::Image<float, dimension2D >  float2D;
+typedef itk::Image<unsigned char, dimension2D> uchar2D;
 
 /*for MyView using*/
 typedef enum
@@ -106,15 +110,13 @@ private:
   int getThicknessPoint(int line2_x);
   QString getDistanceInfo(int x1, int y1, int x2, int y2);
   QString getDistanceInfo(int x);
+  void debugImage(uchar2D::Pointer inputImage);
 
   //vtkImageViewer2 *viewer;
 
   // Designer form
   Ui_SimpleView *ui;
   C_fileIO myImage2D;
-  static const int  dimension2D= 2;
-  typedef itk::Image<float, dimension2D >  float2D;
-  typedef itk::Image<unsigned char, dimension2D> uchar2D;
   uchar2D::Pointer OutImage;
   QString InputFile;
   int ImgW, ImgH;

@@ -834,6 +834,7 @@ int SimpleView::getThicknessPoint(int line2_x)
 
 void SimpleView::slotTest()
 {
+//    debugImage(myImage2D.originalImages());
     drawThickness();
 }
 
@@ -905,6 +906,7 @@ void SimpleView::drawThickness()
 
     pt.end();
     displayMyView(img, None);
+    img.save(FILE_THICKNESS);
 }
 
 void SimpleView::RemoveFragments()
@@ -1227,7 +1229,7 @@ void SimpleView::drawSpline1()
                 y_cnt ++;
                 cout<<"############Line2\n";
                 cout<<"(x,y) = ("<<x<<","<<y<<")";
-                for (int i = y; i >=0; i-=2)
+                for (int i = y; i >=0; i--)
                 {
                     QRgb t_rgb = inImg.pixel(x, i);
                     if (qGreen(t_rgb) > 0) every_white = true;
@@ -1306,7 +1308,36 @@ void SimpleView::drawSpline1()
     outImgC.save(FILE_SPLINE);
 }
 
+void SimpleView::debugImage(uchar2D::Pointer inputImage) {
+    uchar2D::RegionType region = inputImage->GetLargestPossibleRegion();
+    uchar2D::SizeType size;
+    size = region.GetSize();
 
+    const int width = size[0];
+    const int height = size[1];
+
+    uchar2D::IndexType index;
+
+    std::vector<unsigned char> valueList;
+    for (int w = 0 ; w < width ; w++) {
+        for (int h = 0 ; h < height ; h++) {
+            index[0] = w;
+            index[1] = h;
+            const unsigned char value = inputImage->GetPixel(index);
+            if (std::find(valueList.begin(), valueList.end(), value) == valueList.end()) {
+                valueList.push_back(value);
+            }
+        }
+    }
+
+    std::sort(valueList.begin(), valueList.end());
+
+    std::vector<unsigned char>::iterator it;
+    for (it = valueList.begin() ; it < valueList.end() ; ++it) {
+        cout << (int)*it << " ";
+    }
+    cout << endl << "size=" << valueList.size() << endl;
+}
 void SimpleView::drawSpline2()
 {
     QImage inImg = QImage(FILE_SOBEL_RED);
