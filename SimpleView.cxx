@@ -1183,19 +1183,26 @@ void SimpleView::drawSpline1()
             QRgb rgb = inImg.pixel(x, y);
             if(qRed(rgb) >=255)
             {
-                slope = fabs((float)(y-last_red_y1) / (float)(x-last_red_x1));
+                slope = (float)(y-last_red_y1) / (float)(x-last_red_x1);
                 cout<<"############Line1\n";
                 cout<<"(x,y) = ("<<x<<","<<y<<")";
                 cout<<", (last_red_x1, last_red_y1) = ("<<last_red_x1<<","<<last_red_y1<<")";
                 cout<<", slope = "<<slope;
                 cout<<", old_slope1 = "<<old_slope1<<endl;
 
+                //the skip point condition
+                    //if slope is going up and before width/2, skip
+                if (x < (inImg.height()/2 + 10) && slope < 0)
+                    continue;
+
                 if(last_red_y1 == -1 || //must sample first point
-                   last_red_x1 == 0  || //must sample second point, let the old_slope1 be correct
+//                   last_red_x1 == 0  || //must sample second point, let the old_slope1 be correct
                    //the diffefenct of 2 slope must < 0.6 && itself must < 0.6
                    fabs(slope-old_slope1) < 0.6 && fabs(slope) < 0.65 ||
                    //slope begin to going up && can not going up too much (< 0.6)
-                   (slope < 0 && old_slope1 > 0) && fabs(slope) < 0.6)
+                   (slope < 0 && old_slope1 > 0) && fabs(slope) < 0.55 /*||
+                   //
+                   x > inImg.height()/5 && slope > 0*/)
                 {
                     sp_x1.push_back(x);
                     sp_y1.push_back(y);
@@ -1204,6 +1211,8 @@ void SimpleView::drawSpline1()
                     last_red_y1 = y;
                     old_slope1 = slope;
                 }
+                //get first old_slope1
+                if(last_red_x1 == 0) old_slope1 = slope;
                 break;
             }
         }
