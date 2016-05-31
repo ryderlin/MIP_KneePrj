@@ -862,7 +862,7 @@ QString SimpleView::getDistanceInfo(int x)
         distance += sqrt(pow(x2[i] - x1[i], 2) + pow(SplineY2[x2[i]] - SplineY1[x1[i]], 2));
     }
     distance = distance / 5.0;
-    distance_info.sprintf("!(%d,%d)to(%d,%d)=\n%lf",x1[2],SplineY1[x1[2]],x2[2],SplineY2[x2[2]], distance);
+    distance_info.sprintf("!(%d,%d)to(%d,%d)=%lf",x1[2],SplineY1[x1[2]],x2[2],SplineY2[x2[2]], distance);
     return distance_info;
 }
 
@@ -887,14 +887,18 @@ void SimpleView::drawThickness()
     x2 = lowestY_x2;        y2 = SplineY2[lowestY_x2];
     distance_info = getDistanceInfo(x2);
     pt.drawLine(x1,y1, x2,y2);
-    pt.drawText(QRect(x1-100, y1-50, 200, 50),Qt::AlignCenter,distance_info);
+    pt.setPen(Qt::yellow);
+    pt.drawText(QRect(0, 0, 500, 20),Qt::AlignLeft,distance_info);
+    pt.setPen(Qt::green);
 
     //draw left and distance info
     x1 = line1_left_x;      y1 = SplineY1[line1_left_x];
     x2 = line2_left_x;      y2 = SplineY2[line2_left_x];
     distance_info = getDistanceInfo(x2);
     pt.drawLine(x1,y1, x2,y2);
-    pt.drawText(QRect(x1-100, y1-50, 200, 50),Qt::AlignCenter,distance_info);
+    pt.setPen(Qt::yellow);
+    pt.drawText(QRect(0, 20, 300, 20),Qt::AlignLeft,distance_info);
+    pt.setPen(Qt::green);
 
     //draw right and distance info
     pt.drawLine(line1_right_x,SplineY1[line1_right_x], line2_right_x,SplineY2[line2_right_x]);
@@ -902,7 +906,9 @@ void SimpleView::drawThickness()
     x2 = line2_right_x;      y2 = SplineY2[line2_right_x];
     distance_info = getDistanceInfo(x2);
     pt.drawLine(x1,y1, x2,y2);
-    pt.drawText(QRect(x1-100, y1-50, 200, 50),Qt::AlignCenter,distance_info);
+    pt.setPen(Qt::yellow);
+    pt.drawText(QRect(0, 40, 300, 30),Qt::AlignLeft,distance_info);
+    pt.setPen(Qt::green);
 
     pt.end();
     displayMyView(img, None);
