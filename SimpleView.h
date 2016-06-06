@@ -15,6 +15,7 @@
 #include "vtkSmartPointer.h"    // Required for smart pointer internal ivars.
 #include <QMainWindow>
 #include "C_fileIO.h"
+#include "stdio.h"
 
 /*define*/
 //file using

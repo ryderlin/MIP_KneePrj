@@ -10,6 +10,7 @@
 
 #include "ui_SimpleView.h"
 #include "SimpleView.h"
+#include "global_typedef.h"
 //QT
 #include<QFileDialog>
 #include<QDir>
@@ -806,10 +807,12 @@ int SimpleView::getThicknessPoint(int line2_x)
 {
     //the upper spline point, for calculating the cartilage thickness
     int line1x;
-    float slope1, slope2, diff = 10.0;
+    float slope1, slope2, diff = 40;
     //find the center thickness
     slope1 = (float)(SplineY2[line2_x+15] - SplineY2[line2_x-15]) / 30.0;
-//    cout << "slope1 = " << slope1 << endl;
+#ifdef DEBUG_DRAW_THICKNESS
+    cout << "slope1 = " << slope1 << endl;
+#endif
     if (slope1 == 0.0)
     {
         line1x = line2_x;
@@ -819,16 +822,20 @@ int SimpleView::getThicknessPoint(int line2_x)
         for(int x = 0; x < ImgW; x++)
         {
             slope2 = (float)(SplineY1[x] - SplineY2[line2_x]) / (float)(x - line2_x);
+#ifdef DEBUG_DRAW_THICKNESS
+                cout << "slope2 = " << slope2 << endl;
+                cout << "diff is : " << diff << endl;
+#endif
             if ((float)abs(slope2 - ((-1.0)/slope1)) < diff)
             {
                 diff = (float)abs(slope2 - ((-1.0)/slope1));
-//                cout << "slope2 = " << slope2 << endl;
-//                cout << "diff is : " << diff << endl;
                 line1x = x;
             }
         }
     }
-//    cout << "line1xy is :" << line1x << "," << SplineY1[line1x]<<endl;
+#ifdef DEBUG_DRAW_THICKNESS
+    cout << "line1xy is :" << line1x << "," << SplineY1[line1x]<<endl;
+#endif
     return line1x;
 }
 
@@ -857,7 +864,7 @@ QString SimpleView::getDistanceInfo(int x)
     {
         x2[i] = x+(i-2)*offset;
         x1[i] = getThicknessPoint(x2[i]);
-        cout << "(x1,y1) = (" << x1[i] << "," << SplineY1[x1[i]] << ")" << endl;
+        cout << __func__<<"(x1,y1) = (" << x1[i] << "," << SplineY1[x1[i]] << "); " ;
         cout << "(x2,y2) = (" << x2[i] << "," << SplineY2[x2[i]] << ")" << endl;
         distance += sqrt(pow(x2[i] - x1[i], 2) + pow(SplineY2[x2[i]] - SplineY1[x1[i]], 2));
     }
@@ -911,7 +918,7 @@ void SimpleView::drawThickness()
     pt.setPen(Qt::green);
 
     pt.end();
-    displayMyView(img, None);
+    displayMyView(img, CalculateDistance);
     img.save(FILE_THICKNESS);
 }
 

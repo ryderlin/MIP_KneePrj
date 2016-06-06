@@ -332,7 +332,8 @@ HEADERS += \
     C_itkSeg.h \
     C_tool.h \
     spline.h \
-    itkImageToVTKImageFilter.h
+    itkImageToVTKImageFilter.h \
+    global_typedef.h
 
 FORMS += \
     SimpleView.ui
