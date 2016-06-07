@@ -1,0 +1,7 @@
+#ifndef GLOBAL_TYPEDEF_H
+#define GLOBAL_TYPEDEF_H
+
+//#define DEBUG_DRAW_THICKNESS
+
+#endif // GLOBAL_TYPEDEF_H
+
