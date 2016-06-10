@@ -701,7 +701,7 @@ bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexTyp
 
 void SimpleView::slotSobel()
 {
-#if 1 //escape the remove fragment step
+#if 0 //escape the remove fragment step
     myImage2D.readFiletoImages(FILE_REGION_GROWING);
 #else
     myImage2D.readFiletoImages(FILE_SMOOTH_EDGE);
@@ -999,7 +999,11 @@ void SimpleView::slotSmoothEdge()
 {
     ReaderType::Pointer ITKImageReader;
     ITKImageReader = ReaderType::New();
+#if 1 //escape the remove fragment step
+    ITKImageReader->SetFileName(FILE_REGION_GROWING);
+#else
     ITKImageReader->SetFileName(FILE_REMOVE_FRAGMENT);
+#endif
     typedef itk::BinaryBallStructuringElement<ImageType::PixelType, ImageType::ImageDimension>
                 StructuringElementType;
 
@@ -1208,7 +1212,7 @@ void SimpleView::drawSpline1()
                 //the skip point condition
                     //if slope is going up and before width/2, skip
                 if (x < (inImg.height()/2 + 10) && slope < 0)
-                    continue;
+                    break;
 
                 if(last_red_y1 == -1 || //must sample first point
 //                   last_red_x1 == 0  || //must sample second point, let the old_slope1 be correct
@@ -1219,6 +1223,7 @@ void SimpleView::drawSpline1()
                    //
                    x > inImg.height()/5 && slope > 0*/)
                 {
+                    cout<<"sample taken!!"<<endl;
                     sp_x1.push_back(x);
                     sp_y1.push_back(y);
                     drawColorDot(&sampleImg,qRgb(0,0,255), x, y);
@@ -1232,7 +1237,7 @@ void SimpleView::drawSpline1()
             }
         }
         //find top line of the bottom edge
-        int y2 = 0, y_use = 0, y_cnt = 0;
+        int y2 = 0, y_use = 0, y_cnt = 0, y_tmp = 0;
         bool every_white = false;
         for(int y = inImg.height()-1; y >= 0; y--)
         {
@@ -1254,6 +1259,13 @@ void SimpleView::drawSpline1()
                         cout<<", (x,i) = ("<<x<<","<<i<<")";
                         cout<<", y_cnt = "<<y_cnt<<endl;
                     }
+                    else if (qRed(t_rgb) >=255 && !every_white)
+                    {
+                        //to remember the top y of the continous red y points
+                        if (y_tmp == 0 || i == y_tmp - 1)
+                            y_tmp = i;
+                        cout<<", y_tmp = "<<y_tmp<<endl;
+                    }
                 }
                 if (y_cnt >= 3) //means total >= 3 lines, but I needs line2
                 {
@@ -1261,7 +1273,7 @@ void SimpleView::drawSpline1()
                 }
                 else if (y_cnt == 2) //means total has 2 lines, but I needs line1
                 {
-                    y_use = y;
+                    y_use = y_tmp;
                 }
                 cout<<", y_cnt = "<<y_cnt<<endl;
 
@@ -1277,6 +1289,7 @@ void SimpleView::drawSpline1()
                    //slope begin to going up && can not going up too much (< 0.6)
                    (slope < 0 && old_slope2 > 0) && fabs(slope) < 0.6)
                 {
+                    cout<<"sample taken!!"<<endl;
                     sp_x2.push_back(x);
                     sp_y2.push_back(y_use);
                     drawColorDot(&sampleImg,qRgb(0,255,0), x, y_use);
