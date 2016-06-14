@@ -656,8 +656,8 @@ void SimpleView::slotPreProcessMrf16()
 
     //merge and then see whick one has largest edges
     int edge_pixel_count[15];
-    float edge_count_th_low = ImgW * 6 * 1.3;
-    float edge_count_th_hi = edge_count_th_low + 150;
+    float edge_count_th_low = ImgW * 6;
+    float edge_count_th_hi = ImgW * 6 * 1.4;
     cout << "ImgW : "<<ImgW <<" edge count threshold low : "<<edge_count_th_low<<" edge count threshold high: "<<edge_count_th_hi<<endl;
     for (int i = 3; i < 15; i++)
     {
@@ -671,14 +671,16 @@ void SimpleView::slotPreProcessMrf16()
     {
         if (edge_pixel_count[i] > edge_count_th_low)
         {
-            for(int j = i; j < 15; j++)
+            cout << "i:"<<i;
+            for(int j = i+1; j < 15; j++)
             {
                 if (edge_pixel_count[j] > edge_count_th_hi)
                 {
-                    MrfMerge((i+j)/2);
+                    cout << " j:"<<j;
+                    MrfMerge((i+j-1)/2);
                     region_growing(FILE_MRF_MERGE, FILE_REGION_GROWING, ImgW/2, ImgH-10, 255);
                     edge_pixel_count[i] = sobelFilter();
-                    cout<<"do merge:"<<(i+j)/2<<endl;
+                    cout<<" do merge:"<<(i+j-1)/2<<endl;
                     break;
                 }
             }
