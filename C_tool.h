@@ -8,6 +8,7 @@
 #include <cstring>
 #include <string>
 #include <QtWidgets>	//#include <QtGui/QMainWindow>
+
 #include <itkImage.h>	// ITK 
 #include <itkRGBPixel.h>
 #include <itkImageFileReader.h>
@@ -16,6 +17,8 @@
 #include "itkGDCMImageIO.h"	//ITK 3D
 #include "itkGDCMSeriesFileNames.h"
 #include "itkImageSeriesReader.h"
+#include "itkGradientAnisotropicDiffusionImageFilter.h"
+
 #include <vtkSmartPointer.h>	// VTK 
 #include <vtkImageActor.h>
 #include <vtkImageMapper3D.h>

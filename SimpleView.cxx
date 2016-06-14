@@ -37,6 +37,7 @@
 #include "itkBinaryBallStructuringElement.h"
 #include "itkBinaryMorphologicalClosingImageFilter.h"
 #include "itkBinaryMorphologicalOpeningImageFilter.h"
+#include "itkConnectedComponentImageFilter.h"
 //VTK
 #include <vtkAutoInit.h>
 #include <vtkDataObjectToTable.h>
@@ -474,6 +475,7 @@ SimpleView::SimpleView()
     connect(this->ui->actionExit, SIGNAL(triggered()), this, SLOT(slotExit()));
     connect(this->ui->btnRunMrf, SIGNAL (released()),this, SLOT (slotRunMrf()));
     connect(this->ui->btnRunSig, SIGNAL (released()),this, SLOT (slotRunSig()));
+    connect(this->ui->btnPreProcessMrf, SIGNAL (released()),this, SLOT (slotPreProcessMrf16()));
     connect(this->ui->btnRunAD, SIGNAL (released()),this, SLOT (slotRunAD()));
     connect(this->ui->btnReset, SIGNAL (released()),this, SLOT (slotReset()));
     connect(this->ui->btnWriteFile, SIGNAL (released()),this, SLOT (slotWriteFile()));
@@ -603,6 +605,7 @@ void SimpleView::slotOpenFile()
     QImage img(InputFile);
     ImgW = img.width();
     ImgH = img.height();
+    cout << "W x H : " << ImgW <<","<<ImgH<<endl;
 //    this->displayMyView(img, None);
     this->displayImage(vtkimage);
 
@@ -612,12 +615,84 @@ void SimpleView::slotOpenFile()
     vtkimage = NULL;
 }
 
+void SimpleView::slotPreProcessMrf16()
+{
+    typedef unsigned char InputPixelType;
+    typedef itk::Image< InputPixelType, 2 > InputImageType;
+
+    typedef float                                     OutputPixelType;
+    typedef itk::Image< OutputPixelType, 2 >  OutputImageType;
+    typedef itk::GradientAnisotropicDiffusionImageFilter< InputImageType,
+            OutputImageType > FilterType;
+    FilterType::Pointer filter = FilterType::New();
+    filter->SetInput( myImage2D.originalImages());
+    filter->SetNumberOfIterations(5.0/*this->ui->leAD_Iteration->text().toDouble()*/);
+    filter->SetTimeStep( 0.25 );
+    filter->SetConductanceParameter(5.0/*this->ui->leAD_Conductance->text().toDouble()*/);
+
+    //convert output from float to uchar2d
+    typedef itk::RescaleIntensityImageFilter<OutputImageType, InputImageType> RescaleType;
+    RescaleType::Pointer rescaler = RescaleType::New();
+    rescaler->SetInput( filter->GetOutput() );
+    rescaler->SetOutputMinimum( itk::NumericTraits< InputPixelType >::min() );
+    rescaler->SetOutputMaximum( itk::NumericTraits< InputPixelType >::max() );
+
+    double alpha = this->ui->leSigAlpha->text().toDouble();
+    double beta = this->ui->leSigBeta->text().toDouble();
+    typedef itk::SigmoidImageFilter <ImageType, ImageType>
+            SigmoidImageFilterType;
+    SigmoidImageFilterType::Pointer sigmoidFilter
+            = SigmoidImageFilterType::New();
+    sigmoidFilter->SetInput(rescaler->GetOutput());
+    sigmoidFilter->SetOutputMinimum(0);
+    sigmoidFilter->SetOutputMaximum(itk::NumericTraits< signed short >::max());
+    sigmoidFilter->SetAlpha(alpha);
+    sigmoidFilter->SetBeta(beta);
+    myImage2D.readFromOtherOutput(sigmoidFilter->GetOutput());
+    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+    this->ui->qvtkWidget_Seg->repaint();
+    this->ui->qvtkWidget_Seg->show();
+    slotRunMrf();
+
+    //merge and then see whick one has largest edges
+    int edge_pixel_count[15];
+    float edge_count_th_low = ImgW * 6 * 1.3;
+    float edge_count_th_hi = edge_count_th_low + 150;
+    cout << "ImgW : "<<ImgW <<" edge count threshold low : "<<edge_count_th_low<<" edge count threshold high: "<<edge_count_th_hi<<endl;
+    for (int i = 3; i < 15; i++)
+    {
+        MrfMerge(i);
+        region_growing(FILE_MRF_MERGE, FILE_REGION_GROWING, ImgW/2, ImgH-10, 255);
+        edge_pixel_count[i] = sobelFilter();
+        cout<<"merge:"<<i<<", edge_pixel_count:"<<edge_pixel_count[i]<<endl;
+//        if (edge_pixel_count > th_edge_count) break;
+    }
+    for (int i = 3; i < 15; i++)
+    {
+        if (edge_pixel_count[i] > edge_count_th_low)
+        {
+            for(int j = i; j < 15; j++)
+            {
+                if (edge_pixel_count[j] > edge_count_th_hi)
+                {
+                    MrfMerge((i+j)/2);
+                    region_growing(FILE_MRF_MERGE, FILE_REGION_GROWING, ImgW/2, ImgH-10, 255);
+                    edge_pixel_count[i] = sobelFilter();
+                    cout<<"do merge:"<<(i+j)/2<<endl;
+                    break;
+                }
+            }
+            break;
+        }
+    }
+}
+
 void SimpleView::slotRunMrf()
 {
     C_fileIO kmeanImage;
     C_fileIO mrfImage;
     C_itkSeg mySeg;
-    mySeg.setParameter(this->ui->leIterationNum->text().toInt());
+    mySeg.setParameter(16/*this->ui->leIterationNum->text().toInt()*/);
     kmeanImage.readFromOtherImage(mySeg.kmeanMethod2D( myImage2D.castsignedShort2D())) ;
     myImage2D.readFromOtherImage(  mySeg.markovMethod2D( myImage2D.castsignedShort2D(), kmeanImage.originalImages()  )  );
     myImage2D.writeImageToFile(FILE_MRF);
@@ -649,9 +724,9 @@ void SimpleView::slotRunAD()
     rescaler->SetOutputMaximum( itk::NumericTraits< InputPixelType >::max() );
 
     myImage2D.readFromOtherOutput(rescaler->GetOutput());
-    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    this->ui->qvtkWidget_Seg->repaint();
-    this->ui->qvtkWidget_Seg->show();
+//    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+//    this->ui->qvtkWidget_Seg->repaint();
+//    this->ui->qvtkWidget_Seg->show();
 }
 
 void SimpleView::slotRunSig()
@@ -699,9 +774,9 @@ bool SimpleView::up_pixel_same(ImageType::Pointer seg_image, ImageType::IndexTyp
     return true;
 }
 
-void SimpleView::slotSobel()
+int SimpleView::sobelFilter()
 {
-#if 0 //escape the remove fragment step
+#if 1 //escape the remove fragment step
     myImage2D.readFiletoImages(FILE_REGION_GROWING);
 #else
     myImage2D.readFiletoImages(FILE_SMOOTH_EDGE);
@@ -724,7 +799,7 @@ void SimpleView::slotSobel()
     myImage2D.writeImageToFile(FILE_SOBEL);
 
     //convert sobel to red line
-    int row, col;
+    int row, col, edge_pixel_count = 0;
     QImage inImg(FILE_SOBEL);
     QImage outImg = QImage(InputFile.toLatin1().data());
     QImage outImgC = outImg.convertToFormat(QImage::Format_RGB888);
@@ -735,15 +810,22 @@ void SimpleView::slotSobel()
             QRgb rgb = inImg.pixel(col, row);
             if(qRed(rgb) > 0/*this->ui->leTestValue->text().toInt()*/)
             {
+                edge_pixel_count ++;
                 outImgC.setPixel(col, row, qRgb(255, 0, 0));
             }
         }
     }
-    this->displayMyView(outImgC, None);
+//    this->displayMyView(outImgC, None);
     outImgC.save(FILE_SOBEL_RED);
+    return edge_pixel_count;
 }
 
-void SimpleView::slotMerge()
+void SimpleView::slotSobel()
+{
+    sobelFilter();
+}
+
+void SimpleView::MrfMerge(int classes)
 {
     QImage inImg(FILE_MRF);
     int Original_Image_Height = inImg.height();
@@ -753,10 +835,10 @@ void SimpleView::slotMerge()
     int ThresholdingValue;
 
 
-    ClassNumber = (float)(this->ui->leIterationNum->text().toInt());
-    SelectingClass = (float)(this->ui->leMergedCls->text().toInt());
+    ClassNumber = 16.0;
+    SelectingClass = (float)(classes);
     ThresholdingValue = (int)(((255.0 / (ClassNumber - 1.0)) * (SelectingClass - 1.0)) + 2.0);
-    cout << "ThresholdingValue is : " << ThresholdingValue << endl;
+//    cout << "ThresholdingValue is : " << ThresholdingValue << endl;
     for(int j = 0;j < Original_Image_Height;j++)
     {
         for(int i = 0;i < Original_Image_Width;i++)
@@ -768,8 +850,32 @@ void SimpleView::slotMerge()
                 inImg.setPixel(i, j, 255);
         }
     }
-    this->displayMyView(inImg, RegionGrowing);
+
+//    this->displayMyView(inImg, RegionGrowing);
+    QString saved_file_name = FILE_MRF_MERGE;
+//    inImg.save(saved_file_name.remove(".bmp") + QString::number(classes) + ".bmp");
     inImg.save(FILE_MRF_MERGE);
+}
+
+void SimpleView::slotMerge()
+{
+    int edge_pixel_count = 0;
+    int i = this->ui->leMergedCls->text().toInt();
+    MrfMerge(i);
+    region_growing(FILE_MRF_MERGE, FILE_REGION_GROWING, ImgW/2, ImgH-10, 255);
+//    myImage2D.readFiletoImages(FILE_MRF_MERGE);
+//    //count image object
+//    typedef itk::ConnectedComponentImageFilter <ImageType, ImageType >
+//      ConnectedComponentImageFilterType;
+
+//    ConnectedComponentImageFilterType::Pointer connected = ConnectedComponentImageFilterType::New ();
+//    connected->SetInput(myImage2D.originalImages());
+//    connected->Update();
+
+//    std::cout << "Number of objects: " << connected->GetObjectCount() << std::endl;
+
+    edge_pixel_count = sobelFilter();
+    cout<<"merge:"<<i<<", edge_pixel_count:"<<edge_pixel_count<<endl;
 }
 
 void SimpleView::region_growing(QString image_file, QString out_file, int seed_x, int seed_y, int replaced_pixel)

@@ -16,6 +16,6 @@ public:
 	std::map<int, double> getMean2D(signedShort2D::Pointer, uchar2D::Pointer);
 	uchar2D::Pointer watershedMethod2D(uchar2D::Pointer, double*);
 	uchar2D::Pointer regionGrowMethod2D(uchar2D::Pointer, double*);
-
+    uchar2D::Pointer anisotropicDiffusion(uchar2D::Pointer  inputImage);
 };
 #endif

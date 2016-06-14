@@ -76,6 +76,7 @@ public slots:
 
   virtual void slotOpenFile();
   virtual void slotExit();
+  virtual void slotPreProcessMrf16();
   virtual void slotRunMrf();
   virtual void slotRunSig();
   virtual void slotRunAD();
@@ -112,6 +113,8 @@ private:
   QString getDistanceInfo(int x1, int y1, int x2, int y2);
   QString getDistanceInfo(int x);
   void debugImage(uchar2D::Pointer inputImage);
+  void MrfMerge(int classes);
+  int sobelFilter();
 
   //vtkImageViewer2 *viewer;
 

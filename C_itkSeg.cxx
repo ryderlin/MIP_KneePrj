@@ -371,5 +371,29 @@ C_itkSeg::uchar2D::Pointer  C_itkSeg::regionGrowMethod2D(C_itkSeg::uchar2D::Poin
     return  connectedThreshold->GetOutput();
 }
 
+C_itkSeg::uchar2D::Pointer  C_itkSeg::anisotropicDiffusion(C_itkSeg::uchar2D::Pointer  inputImage)
+{
+    typedef unsigned char InputPixelType;
+    typedef itk::Image< InputPixelType, 2 > InputImageType;
+
+    typedef float                                     OutputPixelType;
+    typedef itk::Image< OutputPixelType, 2 >  OutputImageType;
+    typedef itk::GradientAnisotropicDiffusionImageFilter< InputImageType,
+            OutputImageType > FilterType;
+    FilterType::Pointer filter = FilterType::New();
+    filter->SetInput(inputImage);
+    filter->SetNumberOfIterations(5.0/*this->ui->leAD_Iteration->text().toDouble()*/);
+    filter->SetTimeStep( 0.25 );
+    filter->SetConductanceParameter(5.0/*this->ui->leAD_Conductance->text().toDouble()*/);
+
+    //convert output from float to uchar2d
+    typedef itk::RescaleIntensityImageFilter<OutputImageType, InputImageType> RescaleType;
+    RescaleType::Pointer rescaler = RescaleType::New();
+    rescaler->SetInput( filter->GetOutput() );
+    rescaler->SetOutputMinimum( itk::NumericTraits< InputPixelType >::min() );
+    rescaler->SetOutputMaximum( itk::NumericTraits< InputPixelType >::max() );
+    return rescaler->GetOutput();
+}
+
 
 
