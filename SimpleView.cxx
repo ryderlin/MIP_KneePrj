@@ -1198,12 +1198,13 @@ void SimpleView::Opening()
 void SimpleView::slotSpline()
 {
 #if 1 //the difference of 2 slope must < a constant
-    drawSpline1();
+    drawSpline3();
 #else
     drawSpline();
 #endif
 }
 
+//first version of drawSpline, just only check the slope between the neighor
 void SimpleView::drawSpline()
 {
 #if 1 //test
@@ -1409,6 +1410,199 @@ void SimpleView::drawSpline1()
             }
         }
     }
+    s1.set_points(sp_x1,sp_y1);
+    s2.set_points(sp_x2,sp_y2);
+    memset(SplineY1, 0, sizeof(SplineY1));
+    memset(SplineY2, 0, sizeof(SplineY2));
+    lowestY_x1 = lowestY_x2 = 0;
+    int max_y1 = 0, max_y2 = 0;
+    for (int col = 0; col<outImgC.width(); col++)
+    {
+        outImgC.setPixel(col, (int)s1((double)col), qRgb(255, 0, 0));
+        outImgC.setPixel(col, (int)s2((double)col), qRgb(255, 0, 0));
+        drawColorDot(&inImg, qRgb(0,0,255), col, (int)s1((double)col));
+        drawColorDot(&inImg, qRgb(0,255,0), col, (int)s2((double)col));
+        //recording the 2 spline cordinates, and lowestY_x1, lowestY_x2
+        SplineY1[col] = (int)s1((double)col);
+        SplineY2[col] = (int)s2((double)col);
+        if (SplineY1[col] > max_y1)
+        {
+            max_y1 = SplineY1[col];
+            lowestY_x1 = col;
+        }
+        if (SplineY2[col] > max_y2)
+        {
+            max_y2 = SplineY2[col];
+            lowestY_x2 = col;
+        }
+    }
+    sampleImg.save(FILE_SPLINE_SAMPLE);
+    drawColorDot(&outImgC, qRgb(0,0,255),lowestY_x1, SplineY1[lowestY_x1]);
+    drawColorDot(&outImgC, qRgb(0,255,0),lowestY_x2, SplineY2[lowestY_x2]);
+    this->displayMyView(outImgC, None);
+    outImgC.save(FILE_SPLINE);
+}
+
+//clone from drawSpline1, add reverse check
+void SimpleView::drawSpline3()
+{
+    QImage inImg = QImage(FILE_SOBEL_RED);
+    QImage sampleImg = QImage(FILE_SOBEL_RED);
+    QImage outImg = QImage(InputFile.toLatin1().data());
+    QImage outImgC = outImg.convertToFormat(QImage::Format_RGB888);
+    std::vector<double> sp_x1, sp_y1, sp_x2, sp_y2;
+    std::vector<double> sp_all_x1, sp_all_y1, sp_all_x2, sp_all_y2;
+    tk::spline s1, s2;
+    int last_red_y1 = -1, last_red_x1 = -1;
+    int last_red_y2 = -1, last_red_x2 = -1;
+    float slope = 0.0, old_slope1 = 0.0, old_slope2 = 0.0;
+    //1.get the all sample point first
+    for(int x = 0; x < inImg.width(); x += this->ui->leSplineW->text().toInt())
+    {
+        //line1
+        for(int y = 0; y < inImg.height(); y++)
+        {
+            QRgb rgb = inImg.pixel(x, y);
+            if(qRed(rgb) >=255)
+            {
+                sp_all_x1.push_back(x);
+                sp_all_y1.push_back(y);
+                break;
+            }
+        }
+
+        //line2
+        //find top line of the bottom edge
+        int y2 = 0, y_use = 0, y_cnt = 0, y_tmp = 0;
+        bool every_white = false;
+        for(int y = inImg.height()-1; y >= 0; y--)
+        {
+            QRgb rgb = inImg.pixel(x, y);
+            if(qRed(rgb) >=255)
+            {
+                y_cnt ++;
+                cout<<"############Line2\n";
+                cout<<"(x,y) = ("<<x<<","<<y<<")";
+                //find the top point of line2
+                for (int i = y; i >=0; i--)
+                {
+                    QRgb t_rgb = inImg.pixel(x, i);
+                    if (qGreen(t_rgb) > 0) every_white = true;
+                    if(qRed(t_rgb) >=255 && every_white)
+                    {
+                        every_white = false;
+                        y_cnt ++;
+                        if (y_cnt == 2) y2 = i; //remember the line2's Y cordinate
+                        cout<<", (x,i) = ("<<x<<","<<i<<")";
+                        cout<<", y_cnt = "<<y_cnt<<endl;
+                    }
+                    else if (qRed(t_rgb) >=255 && !every_white)
+                    {
+                        //to remember the top y of the continous red y points
+                        if (y_tmp == 0 || i == y_tmp - 1)
+                            y_tmp = i;
+                        cout<<", y_tmp = "<<y_tmp<<endl;
+                    }
+                }
+                if (y_cnt >= 3) //means total >= 3 lines, but I needs line2
+                {
+                    y_use = y2;
+                }
+                else if (y_cnt == 2) //means total has 2 lines, but I needs line1
+                {
+                    y_use = y_tmp;
+                }
+                cout<<", y_cnt = "<<y_cnt<<endl;
+                sp_all_x2.push_back(x);
+                sp_all_y2.push_back(y_use);
+                break;
+            }
+        }
+    }
+    //2.to check to dispose first point or not
+    float slope_first_point = (sp_all_y1[1] - sp_all_y1[0])/(sp_all_x1[1] - sp_all_x1[0]);
+    cout<<"point0 :"<<sp_all_x1[0]<<","<<sp_all_y1[0]<<endl;
+    cout<<"point1 :"<<sp_all_x1[1]<<","<<sp_all_y1[1]<<endl;
+    cout<<"slope_first_point :"<<slope_first_point<<endl;
+    //if first slope too large, delete the first point then interpolate it
+    if (slope_first_point > 0.65)
+    {
+        cout<<"######after interpolate first point:"<<endl;
+        int interpolate_y = 0;
+        for (int i = 1; i <=5; i++)
+        {
+            interpolate_y += sp_all_y1[i+1] - sp_all_y1[i];
+        }
+        //average
+        interpolate_y = interpolate_y/5;
+        sp_all_y1[0] = sp_all_y1[1] - interpolate_y;
+        slope_first_point = (sp_all_y1[1] - sp_all_y1[0])/(sp_all_x1[1] - sp_all_x1[0]);
+        cout<<"point0 :"<<sp_all_x1[0]<<","<<sp_all_y1[0]<<endl;
+        cout<<"point1 :"<<sp_all_x1[1]<<","<<sp_all_y1[1]<<endl;
+        cout<<"slope_first_point :"<<slope_first_point<<endl;
+    }
+
+    //3.remove some unsuitable point of line1 & line2
+    for (int i = 0; i < sp_all_x1.size(); i++)
+    {
+        /*****line1*****/
+        int x = sp_all_x1[i], y = sp_all_y1[i];
+        slope = (float)(y-last_red_y1) / (float)(x-last_red_x1);
+        //get first old_slope1
+        if(last_red_x1 == 0) old_slope1 = slope;
+        cout<<"############Line1\n";
+        cout<<"(x,y) = ("<<x<<","<<y<<")";
+        cout<<", (last_red_x1, last_red_y1) = ("<<last_red_x1<<","<<last_red_y1<<")";
+        cout<<", slope = "<<slope;
+        cout<<", old_slope1 = "<<old_slope1<<endl;
+
+        //the skip point condition
+            //if slope is going up and before width/2, skip
+        if (x < (inImg.height()/2 + 10) && slope < 0)
+            break;
+
+        if(last_red_y1 == -1 || //must sample first point
+//                   last_red_x1 == 0  || //must sample second point, let the old_slope1 be correct
+           //the diffefenct of 2 slope must < 0.6 && itself must < 0.6
+           fabs(slope-old_slope1) < 0.6 && fabs(slope) < 0.65 ||
+           //slope begin to going up && can not going up too much (< 0.6)
+           (slope < 0 && old_slope1 > 0) && fabs(slope) < 0.55 /*||
+           //y_use
+           x > inImg.height()/5 && slope > 0*/)
+        {
+            cout<<"sample taken!!"<<endl;
+            sp_x1.push_back(x);
+            sp_y1.push_back(y);
+            drawColorDot(&sampleImg,qRgb(0,0,255), x, y);
+            last_red_x1 = x;
+            last_red_y1 = y;
+            old_slope1 = slope;
+        }
+
+        /*****line2*****/
+        x = sp_all_x2[i], y = sp_all_y2[i];
+        slope = (float)(y-last_red_y2) / (float)(x-last_red_x2);
+        cout<<"(x,y) = ("<<x<<","<<y<<")";
+        cout<<", (last_red_x2, last_red_y2) = ("<<last_red_x2<<","<<last_red_y2<<")";
+        cout<<", slope = "<<slope;
+        cout<<", old_slope2 = "<<old_slope2<<endl;
+        if(last_red_y2 == -1 ||
+           last_red_x2 == 0  ||
+           //the diffefenct of 2 slope must < 0.6 && itself must < 0.6
+           fabs(slope-old_slope2) < 0.6  && fabs(slope) < 0.65 ||
+           //slope begin to going up && can not going up too much (< 0.6)
+           (slope < 0 && old_slope2 > 0) && fabs(slope) < 0.6)
+        {
+            cout<<"sample taken!!"<<endl;
+            sp_x2.push_back(x);
+            sp_y2.push_back(y);
+            drawColorDot(&sampleImg,qRgb(0,255,0), x, y);
+            last_red_x2 = x;
+            last_red_y2 = y;
+            old_slope2 = slope;
+        }
+    }
+
     s1.set_points(sp_x1,sp_y1);
     s2.set_points(sp_x2,sp_y2);
     memset(SplineY1, 0, sizeof(SplineY1));
