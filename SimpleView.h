@@ -75,6 +75,7 @@ public:
 public slots:
 
   virtual void slotOpenFile();
+  virtual void slotOpenDocImg();
   virtual void slotExit();
   virtual void slotPreProcessMrf16();
   virtual void slotRunMrf();
@@ -116,6 +117,10 @@ private:
   void debugImage(uchar2D::Pointer inputImage);
   void MrfMerge(int classes);
   int sobelFilter();
+  void showComputerSegImage(QImage img);
+  void showDoctorSegImage(QImage img);
+  bool is5PixelDot(QImage in_img, int x, int y, int color);
+  bool is5PixelDot_RightThickness(QImage in_img, int x, int y, int color);
 
   //vtkImageViewer2 *viewer;
 
@@ -124,6 +129,7 @@ private:
   C_fileIO myImage2D;
   uchar2D::Pointer OutImage;
   QString InputFile;
+  QString DoctorInputFile;
   int ImgW, ImgH;
   //for recording two red splines' Y cordinates, because X will be sequential from 0 to width.
   int SplineY1[1000], SplineY2[1000];

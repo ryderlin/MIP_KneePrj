@@ -15,6 +15,7 @@
 #include<QFileDialog>
 #include<QDir>
 #include <QGraphicsView>
+#include "QVTKWidget.h"
 //ITK
 #include "itkImage.h"
 #include "itkImageFileReader.h"
@@ -485,8 +486,9 @@ SimpleView::SimpleView()
     connect(this->ui->btnSobel, SIGNAL (released()),this, SLOT (slotSobel()));
     connect(this->ui->btnDeFrangment, SIGNAL (released()),this, SLOT (slotDeFragment()));
     connect(this->ui->btnSmooth, SIGNAL (released()),this, SLOT (slotSmoothEdge()));
-    this->ui->qvtkWidget_Ori->repaint();
-    this->ui->qvtkWidget_Seg->hide();
+    connect(this->ui->btnOpenDocImg, SIGNAL (released()),this, SLOT (slotOpenDocImg()));
+//    this->ui->qvtkWidget_Ori->repaint();
+//    this->ui->qvtkWidget_Seg->hide();
 }
 
 SimpleView::~SimpleView()
@@ -607,12 +609,96 @@ void SimpleView::slotOpenFile()
     ImgH = img.height();
     cout << "W x H : " << ImgW <<","<<ImgH<<endl;
 //    this->displayMyView(img, None);
+    showComputerSegImage(img);
     this->displayImage(vtkimage);
 
     reader = NULL;
     connector = NULL;
     flipYFilter = NULL;
     vtkimage = NULL;
+}
+
+bool SimpleView::is5PixelDot(QImage in_img, int x, int y, int color)
+{
+    for(int i = x; i < x + 5; i++)
+    {
+        for (int j = y; j < y + 5; j++)
+        {
+            if (in_img.pixel(i,j) != color)
+                return false;
+        }
+    }
+    return true;
+}
+
+bool SimpleView::is5PixelDot_RightThickness(QImage in_img, int x, int y, int color)
+{
+    for(int i = x; i < x + 5; i++)
+    {
+        for (int j = y; j < y + 5; j++)
+        {
+            if (qBlue(in_img.pixel(i,j)) != qBlue(color))
+                return false;
+        }
+    }
+    return true;
+}
+
+
+void SimpleView::slotOpenDocImg()
+{
+    DoctorInputFile = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath());
+    showDoctorSegImage(QImage(DoctorInputFile));
+    //load back the image that processed by doctor
+    std::vector<int> center_point_x, center_point_y, left_point_x, left_point_y, right_point_x, right_point_y;
+    QImage info_img(DoctorInputFile.remove("_out.bmp") + "_out_load.bmp");
+    for (int x = 0; x < info_img.width(); x++)
+    {
+        for (int y = 0; y < info_img.height(); y++)
+        {
+            //get center point
+            if(is5PixelDot(info_img, x, y, COLOR_CENTER_DOT_1))
+            {
+                qDebug() << "center point = (" << x+2 << "," << y+2 << ")" << endl;
+                center_point_x.push_back(x+2);
+                center_point_y.push_back(y+2);
+            }
+            //get left point
+            if(is5PixelDot(info_img, x, y, COLOR_LEFT_DOT_1))
+            {
+                qDebug() << "left point = (" << x+2 << "," << y+2 << ")" << endl;
+                left_point_x.push_back(x+2);
+                left_point_y.push_back(y+2);
+            }
+            //get right point
+            if(is5PixelDot_RightThickness(info_img, x, y, COLOR_RIGHT_DOT_1))
+            {
+                qDebug() << "right point = (" << x+2 << "," << y+2 << ")" << endl;
+                right_point_x.push_back(x+2);
+                right_point_x.push_back(y+2);
+            }
+        }
+    }
+}
+
+void SimpleView::showComputerSegImage(QImage img)
+{
+    int w = ui->gbComputerSegImg->width(), h = ui->gbComputerSegImg->height();
+    ui->lbComputerSegImg->setGeometry(0,10+ui->lbComputerSegImgFileName->height(),w,h);
+    ui->lbComputerSegImg->setPixmap(QPixmap::fromImage(img).scaled(w,h,Qt::KeepAspectRatio));
+    ui->lbComputerSegImgFileName->setText(DoctorInputFile);
+    ui->lbComputerSegImgFileName->show();
+    ui->lbComputerSegImg->show();
+}
+
+void SimpleView::showDoctorSegImage(QImage img)
+{
+    int w = ui->gbDoctorSegImg->width(), h = ui->gbDoctorSegImg->height();
+    ui->lbDoctorSegImg->setGeometry(0,10+ui->lbDoctorSegImgFileName->height(),w,h);
+    ui->lbDoctorSegImg->setPixmap(QPixmap::fromImage(img).scaled(w,h,Qt::KeepAspectRatio));
+    ui->lbDoctorSegImgFileName->setText(InputFile);
+    ui->lbDoctorSegImgFileName->show();
+    ui->lbDoctorSegImg->show();
 }
 
 void SimpleView::slotPreProcessMrf16()
@@ -649,9 +735,9 @@ void SimpleView::slotPreProcessMrf16()
     sigmoidFilter->SetAlpha(alpha);
     sigmoidFilter->SetBeta(beta);
     myImage2D.readFromOtherOutput(sigmoidFilter->GetOutput());
-    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    this->ui->qvtkWidget_Seg->repaint();
-    this->ui->qvtkWidget_Seg->show();
+//    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+//    this->ui->qvtkWidget_Seg->repaint();
+//    this->ui->qvtkWidget_Seg->show();
     slotRunMrf();
 
     //merge and then see whick one has largest edges
@@ -687,6 +773,8 @@ void SimpleView::slotPreProcessMrf16()
             break;
         }
     }
+    drawSpline3();
+    drawThickness();
 }
 
 void SimpleView::slotRunMrf()
@@ -698,9 +786,9 @@ void SimpleView::slotRunMrf()
     kmeanImage.readFromOtherImage(mySeg.kmeanMethod2D( myImage2D.castsignedShort2D())) ;
     myImage2D.readFromOtherImage(  mySeg.markovMethod2D( myImage2D.castsignedShort2D(), kmeanImage.originalImages()  )  );
     myImage2D.writeImageToFile(FILE_MRF);
-    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    this->ui->qvtkWidget_Seg->repaint();
-    this->ui->qvtkWidget_Seg->show();
+//    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+//    this->ui->qvtkWidget_Seg->repaint();
+//    this->ui->qvtkWidget_Seg->show();
 }
 
 void SimpleView::slotRunAD()
@@ -745,14 +833,14 @@ void SimpleView::slotRunSig()
     sigmoidFilter->SetAlpha(alpha);
     sigmoidFilter->SetBeta(beta);
     myImage2D.readFromOtherOutput(sigmoidFilter->GetOutput());
-    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    this->ui->qvtkWidget_Seg->repaint();
-    this->ui->qvtkWidget_Seg->show();
+//    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+//    this->ui->qvtkWidget_Seg->repaint();
+//    this->ui->qvtkWidget_Seg->show();
 }
 
 void SimpleView::slotReset()
 {
-    this->ui->qvtkWidget_Seg->hide();
+//    this->ui->qvtkWidget_Seg->hide();
     myImage2D.readFiletoImages(InputFile.toStdString().c_str());
 }
 
@@ -977,7 +1065,7 @@ QString SimpleView::getDistanceInfo(int x)
         distance += sqrt(pow(x2[i] - x1[i], 2) + pow(SplineY2[x2[i]] - SplineY1[x1[i]], 2));
     }
     distance = distance / 5.0;
-    distance_info.sprintf("!(%d,%d)to(%d,%d)=%lf",x1[2],SplineY1[x1[2]],x2[2],SplineY2[x2[2]], distance);
+    distance_info.sprintf("(%d,%d)to(%d,%d)=%lf",x1[2],SplineY1[x1[2]],x2[2],SplineY2[x2[2]], distance);
     return distance_info;
 }
 
@@ -1001,6 +1089,7 @@ void SimpleView::drawThickness()
     x1 = line1_center_x;    y1 = SplineY1[line1_center_x];
     x2 = lowestY_x2;        y2 = SplineY2[lowestY_x2];
     distance_info = getDistanceInfo(x2);
+    ui->lbCCenterThick->setText(ui->lbCCenterThick->text() + distance_info);
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 0, 500, 20),Qt::AlignLeft,distance_info);
@@ -1010,6 +1099,7 @@ void SimpleView::drawThickness()
     x1 = line1_left_x;      y1 = SplineY1[line1_left_x];
     x2 = line2_left_x;      y2 = SplineY2[line2_left_x];
     distance_info = getDistanceInfo(x2);
+    ui->lbCLeftThick->setText(ui->lbCLeftThick->text() + distance_info);
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 20, 300, 20),Qt::AlignLeft,distance_info);
@@ -1020,6 +1110,7 @@ void SimpleView::drawThickness()
     x1 = line1_right_x;      y1 = SplineY1[line1_right_x];
     x2 = line2_right_x;      y2 = SplineY2[line2_right_x];
     distance_info = getDistanceInfo(x2);
+    ui->lbCRightThick->setText(ui->lbCRightThick->text() + distance_info);
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 40, 300, 30),Qt::AlignLeft,distance_info);
@@ -1027,6 +1118,7 @@ void SimpleView::drawThickness()
 
     pt.end();
     displayMyView(img, CalculateDistance);
+    showComputerSegImage(img);
     img.save(FILE_THICKNESS);
 }
 
@@ -1148,9 +1240,9 @@ void SimpleView::slotSmoothEdge()
     QImage img(FILE_SMOOTH_EDGE);
     displayMyView(img, None);
 
-    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    this->ui->qvtkWidget_Seg->repaint();
-    this->ui->qvtkWidget_Seg->show();
+//    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+//    this->ui->qvtkWidget_Seg->repaint();
+//    this->ui->qvtkWidget_Seg->show();
 }
 
 void SimpleView::Opening()
@@ -1189,9 +1281,9 @@ void SimpleView::Opening()
     myImage2D.readFromOtherOutput(openingFilter->GetOutput());
     myImage2D.writeImageToFile(FILE_REMOVE_FRAGMENT);
 
-    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
-    this->ui->qvtkWidget_Seg->repaint();
-    this->ui->qvtkWidget_Seg->show();
+//    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
+//    this->ui->qvtkWidget_Seg->repaint();
+//    this->ui->qvtkWidget_Seg->show();
 #endif
 }
 
@@ -1832,19 +1924,19 @@ void SimpleView::displayImage2(vtkImageData *image)
     //    callback->SetViewer(imageViewer);
     callback->SetAnnotation(cornerAnnotation);
     callback->SetPicker(propPicker);
-    callback->SetViewer2(this->ui->qvtkWidget_Ori);
+//    callback->SetViewer2(this->ui->qvtkWidget_Ori);
     callback->SetActor(actor);
 
-    this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor()->Initialize();
-    this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor()->Start();
-    this->ui->qvtkWidget_Ori->SetRenderWindow(renderWindow);
+//    this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor()->Initialize();
+//    this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor()->Start();
+//    this->ui->qvtkWidget_Ori->SetRenderWindow(renderWindow);
 
     // window interactor style for display images
     vtkSmartPointer<vtkInteractorStyleImage> style = vtkSmartPointer<vtkInteractorStyleImage>::New();
     // set interactor style to the qvtkWidget Interactor
-    this->ui->qvtkWidget_Ori->GetInteractor()->SetInteractorStyle(style);
-    this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor()->GetInteractorStyle()->AddObserver(vtkCommand::MouseMoveEvent, callback);
-    this->ui->qvtkWidget_Ori->update();
+//    this->ui->qvtkWidget_Ori->GetInteractor()->SetInteractorStyle(style);
+//    this->ui->qvtkWidget_Ori->GetRenderWindow()->GetInteractor()->GetInteractorStyle()->AddObserver(vtkCommand::MouseMoveEvent, callback);
+//    this->ui->qvtkWidget_Ori->update();
 }
 
 //using QImage to show original image
@@ -1875,20 +1967,20 @@ void SimpleView::displayImage(vtkImageData *image)
     //actor->InterpolateOff();
 
     renderer->AddActor(actor);
-    this->ui->qvtkWidget_Ori->SetRenderWindow(renderWindow);
+//    this->ui->qvtkWidget_Ori->SetRenderWindow(renderWindow);
 
     // window interactor style for display images
     vtkSmartPointer<vtkInteractorStyleImage> style = vtkSmartPointer<vtkInteractorStyleImage>::New();
     // set interactor style to the qvtkWidget Interactor
-    this->ui->qvtkWidget_Ori->GetInteractor()->SetInteractorStyle(style);
+//    this->ui->qvtkWidget_Ori->GetInteractor()->SetInteractorStyle(style);
 
-    this->ui->qvtkWidget_Ori->update();
+//    this->ui->qvtkWidget_Ori->update();
 #if 1   //test from chris, get mouse event and put a pixel on it
     // get double click events
     vtkCallbackCommand *callback = vtkCallbackCommand::New();
     callback->SetCallback(SimpleView::handle_double_click);
     callback->SetClientData(this);
-    this->ui->qvtkWidget_Ori->GetInteractor()->AddObserver(vtkCommand::LeftButtonPressEvent, callback, 1.0);
+//    this->ui->qvtkWidget_Ori->GetInteractor()->AddObserver(vtkCommand::LeftButtonPressEvent, callback, 1.0);
 #endif
 }
 
@@ -1949,20 +2041,20 @@ void SimpleView::handle_double_click(vtkObject* obj, unsigned long event, void* 
     actor->GetProperty()->SetPointSize(5);
 
     // store camera original value
-    double *tmp_p = self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->GetPosition();
-    double *tmp_fp = self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->GetFocalPoint();
-    double p[3] = {tmp_p[0], tmp_p[1], tmp_p[2]};
-    double fp[3] = {tmp_fp[0], tmp_fp[1], tmp_fp[2]};
+//    double *tmp_p = self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->GetPosition();
+//    double *tmp_fp = self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->GetFocalPoint();
+//    double p[3] = {tmp_p[0], tmp_p[1], tmp_p[2]};
+//    double fp[3] = {tmp_fp[0], tmp_fp[1], tmp_fp[2]};
     // draw color point
-    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->AddActor(actor);
+//    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->AddActor(actor);
     // reset camera
-    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->ResetCamera();
-    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->Zoom(1.5);
+//    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->ResetCamera();
+//    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->Zoom(1.5);
     // restore camera with original value
-    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->SetPosition(p);
-    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->SetFocalPoint(fp);
-    self->ui->qvtkWidget_Ori->GetRenderWindow()->Render();
-    self->ui->qvtkWidget_Ori->update();
+//    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->SetPosition(p);
+//    self->ui->qvtkWidget_Ori->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera()->SetFocalPoint(fp);
+//    self->ui->qvtkWidget_Ori->GetRenderWindow()->Render();
+//    self->ui->qvtkWidget_Ori->update();
 }
 
 QString SimpleView::getDICOMtagValue(itk::GDCMImageIO::Pointer gdcmIO, QString tagkey) {
