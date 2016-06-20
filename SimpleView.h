@@ -34,6 +34,8 @@
 #define FILE_MRF                    OUT_FILE_DIR"KneeOut_MRF.bmp"
 #define FILE_THICKNESS              OUT_FILE_DIR"KneeOut_Thickness.bmp"
 
+using namespace std;
+
 #if 0//set rgb pixel
 typedef itk::RGBPixel<unsigned char> RGBPixelType;
 typedef itk::Image<RGBPixelType,2> ImageType;
@@ -112,8 +114,8 @@ private:
   void drawSpline3();
   void RemoveFragments();
   int getThicknessPoint(int line2_x);
-  QString getDistanceInfo(int x1, int y1, int x2, int y2);
-  QString getDistanceInfo(int x);
+  QString getDistanceInfo(int x1, int y1, int x2, int y2, double *dis);
+  QString getDistanceInfo(int x, double *dis);
   void debugImage(uchar2D::Pointer inputImage);
   void MrfMerge(int classes);
   int sobelFilter();
@@ -134,7 +136,12 @@ private:
   //for recording two red splines' Y cordinates, because X will be sequential from 0 to width.
   int SplineY1[1000], SplineY2[1000];
   int lowestY_x1, lowestY_x2;
-//  std::vector<int> SplineY1, SplineY2;
+  //computer segmented point
+  std::vector<int> CCenterX, CCenterY, CLeftX, CLeftY, CRightX, CRightY;
+  double CLeftThickness, CCenterThickness, CRightThickness;
+  //doctor segmented point
+  std::vector<int> DCenterX, DCenterY, DLeftX, DLeftY, DRightX, DRightY;
+  double DLeftThickness, DCenterThickness, DRightThickness;
 
 public:
 //  static   C_fileIO myImage2D;

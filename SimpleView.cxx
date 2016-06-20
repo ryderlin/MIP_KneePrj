@@ -81,7 +81,6 @@
 #define VTK_CREATE(type, name) \
     vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
-using namespace std;
 
 //static utility
 static QImage region_growing(QString image_file, QString out_file, int seed_x, int seed_y, int replaced_pixel)
@@ -650,7 +649,6 @@ void SimpleView::slotOpenDocImg()
     DoctorInputFile = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath());
     showDoctorSegImage(QImage(DoctorInputFile));
     //load back the image that processed by doctor
-    std::vector<int> center_point_x, center_point_y, left_point_x, left_point_y, right_point_x, right_point_y;
     QImage info_img(DoctorInputFile.remove("_out.bmp") + "_out_load.bmp");
     for (int x = 0; x < info_img.width(); x++)
     {
@@ -660,25 +658,31 @@ void SimpleView::slotOpenDocImg()
             if(is5PixelDot(info_img, x, y, COLOR_CENTER_DOT_1))
             {
                 qDebug() << "center point = (" << x+2 << "," << y+2 << ")" << endl;
-                center_point_x.push_back(x+2);
-                center_point_y.push_back(y+2);
+                DCenterX.push_back(x+2);
+                DCenterY.push_back(y+2);
             }
             //get left point
             if(is5PixelDot(info_img, x, y, COLOR_LEFT_DOT_1))
             {
                 qDebug() << "left point = (" << x+2 << "," << y+2 << ")" << endl;
-                left_point_x.push_back(x+2);
-                left_point_y.push_back(y+2);
+                DLeftX.push_back(x+2);
+                DLeftY.push_back(y+2);
             }
             //get right point
             if(is5PixelDot_RightThickness(info_img, x, y, COLOR_RIGHT_DOT_1))
             {
                 qDebug() << "right point = (" << x+2 << "," << y+2 << ")" << endl;
-                right_point_x.push_back(x+2);
-                right_point_x.push_back(y+2);
+                DRightX.push_back(x+2);
+                DRightY.push_back(y+2);
             }
         }
     }
+    if(DCenterX.size() >= 2)
+        ui->lbDCenterThick->setText(getDistanceInfo(DCenterX[0], DCenterY[0], DCenterX[1], DCenterY[1], &DCenterThickness));
+    if(DLeftX.size() >= 2)
+        ui->lbDLeftThick->setText(getDistanceInfo(DLeftX[0], DLeftY[0], DLeftX[1], DLeftY[1], &DLeftThickness));
+    if(DRightX.size() >= 2)
+        ui->lbDRightThick->setText(getDistanceInfo(DRightX[0], DRightY[0], DRightX[1], DRightY[1], &DRightThickness));
 }
 
 void SimpleView::showComputerSegImage(QImage img)
@@ -686,7 +690,7 @@ void SimpleView::showComputerSegImage(QImage img)
     int w = ui->gbComputerSegImg->width(), h = ui->gbComputerSegImg->height();
     ui->lbComputerSegImg->setGeometry(0,10+ui->lbComputerSegImgFileName->height(),w,h);
     ui->lbComputerSegImg->setPixmap(QPixmap::fromImage(img).scaled(w,h,Qt::KeepAspectRatio));
-    ui->lbComputerSegImgFileName->setText(DoctorInputFile);
+    ui->lbComputerSegImgFileName->setText(InputFile);
     ui->lbComputerSegImgFileName->show();
     ui->lbComputerSegImg->show();
 }
@@ -696,7 +700,7 @@ void SimpleView::showDoctorSegImage(QImage img)
     int w = ui->gbDoctorSegImg->width(), h = ui->gbDoctorSegImg->height();
     ui->lbDoctorSegImg->setGeometry(0,10+ui->lbDoctorSegImgFileName->height(),w,h);
     ui->lbDoctorSegImg->setPixmap(QPixmap::fromImage(img).scaled(w,h,Qt::KeepAspectRatio));
-    ui->lbDoctorSegImgFileName->setText(InputFile);
+    ui->lbDoctorSegImgFileName->setText(DoctorInputFile);
     ui->lbDoctorSegImgFileName->show();
     ui->lbDoctorSegImg->show();
 }
@@ -1041,16 +1045,16 @@ void SimpleView::slotTest()
     drawThickness();
 }
 
-QString SimpleView::getDistanceInfo(int x1, int y1, int x2, int y2)
+QString SimpleView::getDistanceInfo(int x1, int y1, int x2, int y2, double *dis)
 {
     QString distance_info;
-    //find 5 distances around the given point, then calculate the mean distance
     double distance = sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
-    distance_info.sprintf("(%d,%d)to(%d,%d)=\n%lf",x1,y1,x2,y2, distance);
+    *dis = distance;
+    distance_info.sprintf("(%d,%d)to(%d,%d)=%lf",x1,y1,x2,y2, distance);
     return distance_info;
 }
 
-QString SimpleView::getDistanceInfo(int x)
+QString SimpleView::getDistanceInfo(int x, double *dis)
 {
     QString distance_info;
     //find 5 distances around the given point, then calculate the mean distance
@@ -1065,6 +1069,7 @@ QString SimpleView::getDistanceInfo(int x)
         distance += sqrt(pow(x2[i] - x1[i], 2) + pow(SplineY2[x2[i]] - SplineY1[x1[i]], 2));
     }
     distance = distance / 5.0;
+    *dis = distance;
     distance_info.sprintf("(%d,%d)to(%d,%d)=%lf",x1[2],SplineY1[x1[2]],x2[2],SplineY2[x2[2]], distance);
     return distance_info;
 }
@@ -1088,8 +1093,8 @@ void SimpleView::drawThickness()
     //draw center and distance info
     x1 = line1_center_x;    y1 = SplineY1[line1_center_x];
     x2 = lowestY_x2;        y2 = SplineY2[lowestY_x2];
-    distance_info = getDistanceInfo(x2);
-    ui->lbCCenterThick->setText(ui->lbCCenterThick->text() + distance_info);
+    distance_info = getDistanceInfo(x2, &CCenterThickness);
+    ui->lbCCenterThick->setText(distance_info);
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 0, 500, 20),Qt::AlignLeft,distance_info);
@@ -1098,8 +1103,8 @@ void SimpleView::drawThickness()
     //draw left and distance info
     x1 = line1_left_x;      y1 = SplineY1[line1_left_x];
     x2 = line2_left_x;      y2 = SplineY2[line2_left_x];
-    distance_info = getDistanceInfo(x2);
-    ui->lbCLeftThick->setText(ui->lbCLeftThick->text() + distance_info);
+    distance_info = getDistanceInfo(x2, &CLeftThickness);
+    ui->lbCLeftThick->setText(distance_info);
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 20, 300, 20),Qt::AlignLeft,distance_info);
@@ -1109,8 +1114,8 @@ void SimpleView::drawThickness()
     pt.drawLine(line1_right_x,SplineY1[line1_right_x], line2_right_x,SplineY2[line2_right_x]);
     x1 = line1_right_x;      y1 = SplineY1[line1_right_x];
     x2 = line2_right_x;      y2 = SplineY2[line2_right_x];
-    distance_info = getDistanceInfo(x2);
-    ui->lbCRightThick->setText(ui->lbCRightThick->text() + distance_info);
+    distance_info = getDistanceInfo(x2, &CRightThickness);
+    ui->lbCRightThick->setText(distance_info);
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 40, 300, 30),Qt::AlignLeft,distance_info);

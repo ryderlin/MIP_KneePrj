@@ -300,8 +300,8 @@
    <widget class="QPushButton" name="btnSobel">
     <property name="geometry">
      <rect>
-      <x>830</x>
-      <y>90</y>
+      <x>1030</x>
+      <y>40</y>
       <width>81</width>
       <height>41</height>
      </rect>
@@ -378,8 +378,8 @@
    <widget class="QPushButton" name="btnSmooth">
     <property name="geometry">
      <rect>
-      <x>1030</x>
-      <y>20</y>
+      <x>1020</x>
+      <y>0</y>
       <width>131</width>
       <height>51</height>
      </rect>
@@ -434,7 +434,7 @@
       <x>150</x>
       <y>80</y>
       <width>101</width>
-      <height>51</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
@@ -479,25 +479,6 @@ MRF16</string>
       <string/>
      </property>
     </widget>
-    <widget class="QLabel" name="lbComputerSegImgFileName">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>20</y>
-       <width>451</width>
-       <height>17</height>
-      </rect>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-       <horstretch>1</horstretch>
-       <verstretch>1</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>FileName</string>
-     </property>
-    </widget>
    </widget>
    <widget class="QGroupBox" name="gbComputerResult">
     <property name="geometry">
@@ -514,22 +495,48 @@ MRF16</string>
     <widget class="QLabel" name="lbCLeftThick">
      <property name="geometry">
       <rect>
-       <x>10</x>
-       <y>20</y>
-       <width>381</width>
-       <height>17</height>
+       <x>140</x>
+       <y>60</y>
+       <width>251</width>
+       <height>20</height>
       </rect>
      </property>
      <property name="text">
-      <string>left thickness:</string>
+      <string/>
      </property>
     </widget>
     <widget class="QLabel" name="lbCCenterThick">
      <property name="geometry">
       <rect>
+       <x>140</x>
+       <y>20</y>
+       <width>251</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lbCRightThick">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>100</y>
+       <width>251</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label">
+     <property name="geometry">
+      <rect>
        <x>10</x>
-       <y>60</y>
-       <width>381</width>
+       <y>20</y>
+       <width>121</width>
        <height>17</height>
       </rect>
      </property>
@@ -537,12 +544,25 @@ MRF16</string>
       <string>center thickness:</string>
      </property>
     </widget>
-    <widget class="QLabel" name="lbCRightThick">
+    <widget class="QLabel" name="label_2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>60</y>
+       <width>121</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>left thickness:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_3">
      <property name="geometry">
       <rect>
        <x>10</x>
        <y>100</y>
-       <width>381</width>
+       <width>121</width>
        <height>17</height>
       </rect>
      </property>
@@ -588,25 +608,6 @@ MRF16</string>
       <string/>
      </property>
     </widget>
-    <widget class="QLabel" name="lbDoctorSegImgFileName">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>20</y>
-       <width>451</width>
-       <height>17</height>
-      </rect>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-       <horstretch>1</horstretch>
-       <verstretch>1</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>FileName</string>
-     </property>
-    </widget>
    </widget>
    <widget class="QGroupBox" name="gbDoctorResult">
     <property name="geometry">
@@ -623,9 +624,61 @@ MRF16</string>
     <widget class="QLabel" name="lbDLeftThick">
      <property name="geometry">
       <rect>
-       <x>10</x>
+       <x>140</x>
+       <y>60</y>
+       <width>251</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lbDCenterThick">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
        <y>20</y>
-       <width>381</width>
+       <width>241</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lbDRightThick">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>100</y>
+       <width>261</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_4">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>100</y>
+       <width>121</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>right thickness:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_5">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>60</y>
+       <width>121</width>
        <height>17</height>
       </rect>
      </property>
@@ -633,30 +686,17 @@ MRF16</string>
       <string>left thickness:</string>
      </property>
     </widget>
-    <widget class="QLabel" name="lbDCenterThick">
+    <widget class="QLabel" name="label_6">
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>60</y>
-       <width>381</width>
+       <y>20</y>
+       <width>121</width>
        <height>17</height>
       </rect>
      </property>
      <property name="text">
       <string>center thickness:</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="lbDRightThick">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>100</y>
-       <width>381</width>
-       <height>17</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>right thickness:</string>
      </property>
     </widget>
    </widget>
@@ -671,6 +711,44 @@ MRF16</string>
     </property>
     <property name="text">
      <string>Open</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="lbDoctorSegImgFileName">
+    <property name="geometry">
+     <rect>
+      <x>570</x>
+      <y>120</y>
+      <width>451</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+      <horstretch>1</horstretch>
+      <verstretch>1</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="text">
+     <string>FileName</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="lbComputerSegImgFileName">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>120</y>
+      <width>451</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+      <horstretch>1</horstretch>
+      <verstretch>1</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="text">
+     <string>FileName</string>
     </property>
    </widget>
   </widget>
