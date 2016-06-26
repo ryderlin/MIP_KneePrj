@@ -1656,7 +1656,7 @@ void SimpleView::drawSpline3()
         //the skip point condition
             //if slope is going up and before width/2, skip
         if (x < (inImg.height()/2 + 10) && slope < 0)
-            break;
+            continue;
 
         if(last_red_y1 == -1 || //must sample first point
 //                   last_red_x1 == 0  || //must sample second point, let the old_slope1 be correct
@@ -1675,9 +1675,12 @@ void SimpleView::drawSpline3()
             last_red_y1 = y;
             old_slope1 = slope;
         }
+    }
 
+    for (int i = 0; i < sp_all_x2.size(); i++)
+    {
         /*****line2*****/
-        x = sp_all_x2[i], y = sp_all_y2[i];
+        int x = sp_all_x2[i], y = sp_all_y2[i];
         slope = (float)(y-last_red_y2) / (float)(x-last_red_x2);
         cout<<"(x,y) = ("<<x<<","<<y<<")";
         cout<<", (last_red_x2, last_red_y2) = ("<<last_red_x2<<","<<last_red_y2<<")";
