@@ -93,6 +93,7 @@ public slots:
   virtual void slotSobel();
   virtual void slotDeFragment();
   virtual void slotSmoothEdge();
+  virtual void slotSelectCmpResult();
   virtual void displayImage(vtkImageData *image);
   virtual void displayImage2(vtkImageData *image);
   virtual void displayMyView(QImage img, ViewMode view_mode);
@@ -134,7 +135,8 @@ private:
   uchar2D::Pointer OutImage;
   QString InputFile;
   QString DoctorInputFile;
-  int ImgW, ImgH;
+  QTableWidget *tblCmp;
+  int ImgW, ImgH;;
   //for recording two red splines' Y cordinates, because X will be sequential from 0 to width.
   int SplineY1[1000], SplineY2[1000];
   int lowestY_x1, lowestY_x2;

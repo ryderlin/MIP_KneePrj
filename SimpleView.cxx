@@ -486,6 +486,25 @@ SimpleView::SimpleView()
     connect(this->ui->btnDeFrangment, SIGNAL (released()),this, SLOT (slotDeFragment()));
     connect(this->ui->btnSmooth, SIGNAL (released()),this, SLOT (slotSmoothEdge()));
     connect(this->ui->btnOpenDocImg, SIGNAL (released()),this, SLOT (slotOpenDocImg()));
+
+    tblCmp = new QTableWidget(3, 3, this);
+    tblCmp->setGeometry(20, 600, 500, 200);
+    tblCmp->setWindowTitle("compare result");
+//    tblCmp->resize(350, 200);  //设置表格
+    QStringList h_header, v_header;
+    h_header<<"Center Thickness"<<"Left Thickness"<<"Right Thickness";
+    v_header<<"Computer"<<"Doctor"<<"error %";
+    tblCmp->setHorizontalHeaderLabels(h_header);
+    tblCmp->setVerticalHeaderLabels(v_header);
+//    tblCmp->setItem(0,0,new QTableWidgetItem("Jan"));
+//    tblCmp->setItem(1,0,new QTableWidgetItem("Feb"));
+//    tblCmp->setItem(2,0,new QTableWidgetItem("Mar"));
+
+//    tblCmp->setItem(0,1,new QTableWidgetItem("Jan's month"));
+//    tblCmp->setItem(1,1,new QTableWidgetItem("Feb's month"));
+//    tblCmp->setItem(2,1,new QTableWidgetItem("Mar's month"));
+    tblCmp->show();
+    connect(this->ui->btnSelect, SIGNAL (released()),this, SLOT (slotSelectCmpResult()));
 //    this->ui->qvtkWidget_Ori->repaint();
 //    this->ui->qvtkWidget_Seg->hide();
 }
@@ -494,6 +513,38 @@ SimpleView::~SimpleView()
 {
     // The smart pointers should clean up for up
     delete ui;
+}
+
+void SimpleView::slotSelectCmpResult()
+{
+    QAbstractItemModel * model = tblCmp->model();
+    QItemSelectionModel * selection = tblCmp->selectionModel();
+    QModelIndexList indexes = selection->selectedIndexes();
+    QString selected_text;
+    // You need a pair of indexes to find the row changes
+    QModelIndex previous = indexes.first();
+    indexes.removeFirst();
+    foreach(QModelIndex current, indexes)
+    {
+        QVariant data = model->data(current);
+        QString text = data.toString();
+        // At this point `text` contains the text in one cell
+        selected_text.append(text);
+        // If you are at the start of the row the row number of the previous index
+        // isn't the same.  Text is followed by a row separator, which is a newline.
+        if (current.row() != previous.row())
+        {
+            selected_text.append('\n');
+        }
+        // Otherwise it's the same row, so append a column separator, which is a tab.
+        else
+        {
+            selected_text.append('\t');
+        }
+        previous = current;
+    }
+    QClipboard *clipboard = QApplication::clipboard();
+    clipboard->setText(selected_text);
 }
 
 // Action to be taken upon file open
@@ -678,21 +729,40 @@ void SimpleView::slotOpenDocImg()
         }
     }
     //show information of doctor image
+    QString distance_info;
     if(DCenterX.size() >= 2)
-        ui->lbDCenterThick->setText(getDistanceInfo(DCenterX[0], DCenterY[0], DCenterX[1], DCenterY[1], &DCenterThickness));
+    {
+        distance_info = getDistanceInfo(DCenterX[0], DCenterY[0], DCenterX[1], DCenterY[1], &DCenterThickness);
+        ui->lbDCenterThick->setText(distance_info);
+        tblCmp->setItem(1,0,new QTableWidgetItem(distance_info));
+    }
     if(DLeftX.size() >= 2)
-        ui->lbDLeftThick->setText(getDistanceInfo(DLeftX[0], DLeftY[0], DLeftX[1], DLeftY[1], &DLeftThickness));
+    {
+        distance_info = getDistanceInfo(DLeftX[0], DLeftY[0], DLeftX[1], DLeftY[1], &DLeftThickness);
+        ui->lbDLeftThick->setText(distance_info);
+        tblCmp->setItem(1,1,new QTableWidgetItem(distance_info));
+    }
     if(DRightX.size() >= 2)
-        ui->lbDRightThick->setText(getDistanceInfo(DRightX[0], DRightY[0], DRightX[1], DRightY[1], &DRightThickness));
+    {
+        distance_info = getDistanceInfo(DRightX[0], DRightY[0], DRightX[1], DRightY[1], &DRightThickness);
+        ui->lbDRightThick->setText(distance_info);
+        tblCmp->setItem(1,2,new QTableWidgetItem(distance_info));
+    }
     //show compare information
     double difference = fabs(DCenterThickness - CCenterThickness)/CCenterThickness;
-    ui->lbCmpCenter->setText("%" + QString::number(difference*100));
+    QString s_diff = "%" + QString::number(difference*100);
+    ui->lbCmpCenter->setText(s_diff);
+    tblCmp->setItem(2,0,new QTableWidgetItem(s_diff));
 
     difference = fabs(DLeftThickness - CLeftThickness)/CLeftThickness;
-    ui->lbCmpLeft->setText("%" + QString::number(difference*100));
+    s_diff = "%" + QString::number(difference*100);
+    ui->lbCmpLeft->setText(s_diff);
+    tblCmp->setItem(2,1,new QTableWidgetItem(s_diff));
 
     difference = fabs(DRightThickness - CRightThickness)/CRightThickness;
-    ui->lbCmpRight->setText("%" + QString::number(difference*100));
+    s_diff = "%" + QString::number(difference*100);
+    ui->lbCmpRight->setText(s_diff);
+    tblCmp->setItem(2,2,new QTableWidgetItem(s_diff));
 }
 
 void SimpleView::showComputerSegImage(QImage img)
@@ -1107,6 +1177,7 @@ void SimpleView::drawThickness()
     x2 = lowestY_x2;        y2 = SplineY2[lowestY_x2];
     distance_info = getDistanceInfo(x2, &CCenterThickness);
     ui->lbCCenterThick->setText(distance_info);
+    tblCmp->setItem(0,0,new QTableWidgetItem(distance_info));
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 0, 500, 20),Qt::AlignLeft,distance_info);
@@ -1117,6 +1188,7 @@ void SimpleView::drawThickness()
     x2 = line2_left_x;      y2 = SplineY2[line2_left_x];
     distance_info = getDistanceInfo(x2, &CLeftThickness);
     ui->lbCLeftThick->setText(distance_info);
+    tblCmp->setItem(0,1,new QTableWidgetItem(distance_info));
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 20, 300, 20),Qt::AlignLeft,distance_info);
@@ -1128,6 +1200,7 @@ void SimpleView::drawThickness()
     x2 = line2_right_x;      y2 = SplineY2[line2_right_x];
     distance_info = getDistanceInfo(x2, &CRightThickness);
     ui->lbCRightThick->setText(distance_info);
+    tblCmp->setItem(0,2,new QTableWidgetItem(distance_info));
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 40, 300, 30),Qt::AlignLeft,distance_info);

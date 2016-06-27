@@ -492,7 +492,7 @@ MRF16</string>
     <property name="title">
      <string>Computer Result</string>
     </property>
-    <widget class="QLabel" name="lbCLeftThick">
+    <widget class="QLineEdit" name="lbCLeftThick">
      <property name="geometry">
       <rect>
        <x>140</x>
@@ -505,7 +505,7 @@ MRF16</string>
       <string/>
      </property>
     </widget>
-    <widget class="QLabel" name="lbCCenterThick">
+    <widget class="QLineEdit" name="lbCCenterThick">
      <property name="geometry">
       <rect>
        <x>140</x>
@@ -518,7 +518,7 @@ MRF16</string>
       <string/>
      </property>
     </widget>
-    <widget class="QLabel" name="lbCRightThick">
+    <widget class="QLineEdit" name="lbCRightThick">
      <property name="geometry">
       <rect>
        <x>140</x>
@@ -570,6 +570,13 @@ MRF16</string>
       <string>right thickness:</string>
      </property>
     </widget>
+    <zorder>lbCLeftThick</zorder>
+    <zorder>lbCCenterThick</zorder>
+    <zorder>lbCRightThick</zorder>
+    <zorder>label</zorder>
+    <zorder>label_2</zorder>
+    <zorder>label_3</zorder>
+    <zorder>tblCmp</zorder>
    </widget>
    <widget class="QGroupBox" name="gbDoctorSegImg">
     <property name="geometry">
@@ -621,7 +628,7 @@ MRF16</string>
     <property name="title">
      <string>Doctor Result</string>
     </property>
-    <widget class="QLabel" name="lbDLeftThick">
+    <widget class="QLineEdit" name="lbDLeftThick">
      <property name="geometry">
       <rect>
        <x>140</x>
@@ -634,7 +641,7 @@ MRF16</string>
       <string/>
      </property>
     </widget>
-    <widget class="QLabel" name="lbDCenterThick">
+    <widget class="QLineEdit" name="lbDCenterThick">
      <property name="geometry">
       <rect>
        <x>140</x>
@@ -647,7 +654,7 @@ MRF16</string>
       <string/>
      </property>
     </widget>
-    <widget class="QLabel" name="lbDRightThick">
+    <widget class="QLineEdit" name="lbDRightThick">
      <property name="geometry">
       <rect>
        <x>140</x>
@@ -763,7 +770,7 @@ MRF16</string>
     <property name="title">
      <string>Result Compare</string>
     </property>
-    <widget class="QLabel" name="lbCmpLeft">
+    <widget class="QLineEdit" name="lbCmpLeft">
      <property name="geometry">
       <rect>
        <x>130</x>
@@ -776,7 +783,7 @@ MRF16</string>
       <string/>
      </property>
     </widget>
-    <widget class="QLabel" name="lbCmpCenter">
+    <widget class="QLineEdit" name="lbCmpCenter">
      <property name="geometry">
       <rect>
        <x>130</x>
@@ -789,7 +796,7 @@ MRF16</string>
       <string/>
      </property>
     </widget>
-    <widget class="QLabel" name="lbCmpRight">
+    <widget class="QLineEdit" name="lbCmpRight">
      <property name="geometry">
       <rect>
        <x>130</x>
@@ -841,6 +848,19 @@ MRF16</string>
       <string>center thickness:</string>
      </property>
     </widget>
+   </widget>
+   <widget class="QPushButton" name="btnSelect">
+    <property name="geometry">
+     <rect>
+      <x>990</x>
+      <y>540</y>
+      <width>99</width>
+      <height>27</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>select</string>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
