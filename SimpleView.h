@@ -21,6 +21,8 @@
 //file using
 #define OUT_FILE_DIR                "OUTFILE/"
 #define FILE_SAVE                   OUT_FILE_DIR"KneeOut.bmp"
+#define FILE_ANISOTROPIC_DIFUSSION  OUT_FILE_DIR"KneeOut_AD.bmp"
+#define FILE_SIGMOID                OUT_FILE_DIR"KneeOut_SIG.bmp"
 #define FILE_SOBEL                  OUT_FILE_DIR"KneeOut_sobel.bmp"
 #define FILE_SOBEL_RED              OUT_FILE_DIR"KneeOut_sobel_red.bmp"
 #define FILE_MRF_MERGE              OUT_FILE_DIR"KneeOut_merge.bmp"

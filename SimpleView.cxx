@@ -677,12 +677,22 @@ void SimpleView::slotOpenDocImg()
             }
         }
     }
+    //show information of doctor image
     if(DCenterX.size() >= 2)
         ui->lbDCenterThick->setText(getDistanceInfo(DCenterX[0], DCenterY[0], DCenterX[1], DCenterY[1], &DCenterThickness));
     if(DLeftX.size() >= 2)
         ui->lbDLeftThick->setText(getDistanceInfo(DLeftX[0], DLeftY[0], DLeftX[1], DLeftY[1], &DLeftThickness));
     if(DRightX.size() >= 2)
         ui->lbDRightThick->setText(getDistanceInfo(DRightX[0], DRightY[0], DRightX[1], DRightY[1], &DRightThickness));
+    //show compare information
+    double difference = fabs(DCenterThickness - CCenterThickness)/CCenterThickness;
+    ui->lbCmpCenter->setText("%" + QString::number(difference*100));
+
+    difference = fabs(DLeftThickness - CLeftThickness)/CLeftThickness;
+    ui->lbCmpLeft->setText("%" + QString::number(difference*100));
+
+    difference = fabs(DRightThickness - CRightThickness)/CRightThickness;
+    ui->lbCmpRight->setText("%" + QString::number(difference*100));
 }
 
 void SimpleView::showComputerSegImage(QImage img)
@@ -818,6 +828,7 @@ void SimpleView::slotRunAD()
     rescaler->SetOutputMaximum( itk::NumericTraits< InputPixelType >::max() );
 
     myImage2D.readFromOtherOutput(rescaler->GetOutput());
+    myImage2D.writeImageToFile(FILE_ANISOTROPIC_DIFUSSION);
 //    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
 //    this->ui->qvtkWidget_Seg->repaint();
 //    this->ui->qvtkWidget_Seg->show();
@@ -837,6 +848,7 @@ void SimpleView::slotRunSig()
     sigmoidFilter->SetAlpha(alpha);
     sigmoidFilter->SetBeta(beta);
     myImage2D.readFromOtherOutput(sigmoidFilter->GetOutput());
+    myImage2D.writeImageToFile(FILE_SIGMOID);
 //    this->ui->qvtkWidget_Seg->GetRenderWindow()->AddRenderer(myImage2D.vtkRender());
 //    this->ui->qvtkWidget_Seg->repaint();
 //    this->ui->qvtkWidget_Seg->show();
