@@ -488,7 +488,7 @@ SimpleView::SimpleView()
     connect(this->ui->btnOpenDocImg, SIGNAL (released()),this, SLOT (slotOpenDocImg()));
 
     tblCmp = new QTableWidget(3, 3, this);
-    tblCmp->setGeometry(20, 600, 500, 200);
+    tblCmp->setGeometry(20, 600, 1000, 150);
     tblCmp->setWindowTitle("compare result");
 //    tblCmp->resize(350, 200);  //设置表格
     QStringList h_header, v_header;
@@ -496,6 +496,7 @@ SimpleView::SimpleView()
     v_header<<"Computer"<<"Doctor"<<"error %";
     tblCmp->setHorizontalHeaderLabels(h_header);
     tblCmp->setVerticalHeaderLabels(v_header);
+    tblCmp->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 //    tblCmp->setItem(0,0,new QTableWidgetItem("Jan"));
 //    tblCmp->setItem(1,0,new QTableWidgetItem("Feb"));
 //    tblCmp->setItem(2,0,new QTableWidgetItem("Mar"));
@@ -523,13 +524,11 @@ void SimpleView::slotSelectCmpResult()
     QString selected_text;
     // You need a pair of indexes to find the row changes
     QModelIndex previous = indexes.first();
-    indexes.removeFirst();
+//    indexes.removeFirst();
     foreach(QModelIndex current, indexes)
     {
         QVariant data = model->data(current);
         QString text = data.toString();
-        // At this point `text` contains the text in one cell
-        selected_text.append(text);
         // If you are at the start of the row the row number of the previous index
         // isn't the same.  Text is followed by a row separator, which is a newline.
         if (current.row() != previous.row())
@@ -537,10 +536,12 @@ void SimpleView::slotSelectCmpResult()
             selected_text.append('\n');
         }
         // Otherwise it's the same row, so append a column separator, which is a tab.
-        else
+        else if (current != previous)
         {
             selected_text.append('\t');
         }
+        // At this point `text` contains the text in one cell
+        selected_text.append(text);
         previous = current;
     }
     QClipboard *clipboard = QApplication::clipboard();
@@ -701,6 +702,8 @@ void SimpleView::slotOpenDocImg()
     showDoctorSegImage(QImage(DoctorInputFile));
     //load back the image that processed by doctor
     QImage info_img(DoctorInputFile.remove("_out.bmp") + "_out_load.bmp");
+    //clear previous record
+    DCenterX.clear(); DCenterY.clear(); DLeftX.clear(); DLeftY.clear(); DRightX.clear(); DRightY.clear();
     for (int x = 0; x < info_img.width(); x++)
     {
         for (int y = 0; y < info_img.height(); y++)
@@ -749,17 +752,17 @@ void SimpleView::slotOpenDocImg()
         tblCmp->setItem(1,2,new QTableWidgetItem(distance_info));
     }
     //show compare information
-    double difference = fabs(DCenterThickness - CCenterThickness)/CCenterThickness;
+    double difference = (DCenterThickness - CCenterThickness)/CCenterThickness;
     QString s_diff = "%" + QString::number(difference*100);
     ui->lbCmpCenter->setText(s_diff);
     tblCmp->setItem(2,0,new QTableWidgetItem(s_diff));
 
-    difference = fabs(DLeftThickness - CLeftThickness)/CLeftThickness;
+    difference = (DLeftThickness - CLeftThickness)/CLeftThickness;
     s_diff = "%" + QString::number(difference*100);
     ui->lbCmpLeft->setText(s_diff);
     tblCmp->setItem(2,1,new QTableWidgetItem(s_diff));
 
-    difference = fabs(DRightThickness - CRightThickness)/CRightThickness;
+    difference = (DRightThickness - CRightThickness)/CRightThickness;
     s_diff = "%" + QString::number(difference*100);
     ui->lbCmpRight->setText(s_diff);
     tblCmp->setItem(2,2,new QTableWidgetItem(s_diff));
@@ -1207,7 +1210,7 @@ void SimpleView::drawThickness()
     pt.setPen(Qt::green);
 
     pt.end();
-    displayMyView(img, CalculateDistance);
+//    displayMyView(img, CalculateDistance);
     showComputerSegImage(img);
     img.save(FILE_THICKNESS);
 }
@@ -1815,9 +1818,10 @@ void SimpleView::drawSpline3()
         }
     }
     sampleImg.save(FILE_SPLINE_SAMPLE);
+    //draw lowest point
     drawColorDot(&outImgC, qRgb(0,0,255),lowestY_x1, SplineY1[lowestY_x1]);
     drawColorDot(&outImgC, qRgb(0,255,0),lowestY_x2, SplineY2[lowestY_x2]);
-    this->displayMyView(outImgC, None);
+//    this->displayMyView(outImgC, None);
     outImgC.save(FILE_SPLINE);
 }
 

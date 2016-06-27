@@ -570,13 +570,6 @@ MRF16</string>
       <string>right thickness:</string>
      </property>
     </widget>
-    <zorder>lbCLeftThick</zorder>
-    <zorder>lbCCenterThick</zorder>
-    <zorder>lbCRightThick</zorder>
-    <zorder>label</zorder>
-    <zorder>label_2</zorder>
-    <zorder>label_3</zorder>
-    <zorder>tblCmp</zorder>
    </widget>
    <widget class="QGroupBox" name="gbDoctorSegImg">
     <property name="geometry">
@@ -852,8 +845,8 @@ MRF16</string>
    <widget class="QPushButton" name="btnSelect">
     <property name="geometry">
      <rect>
-      <x>990</x>
-      <y>540</y>
+      <x>1040</x>
+      <y>560</y>
       <width>99</width>
       <height>27</height>
      </rect>
