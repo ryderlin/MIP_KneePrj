@@ -1774,6 +1774,8 @@ void SimpleView::drawSpline3()
         cout<<", (last_red_x2, last_red_y2) = ("<<last_red_x2<<","<<last_red_y2<<")";
         cout<<", slope = "<<slope;
         cout<<", old_slope2 = "<<old_slope2<<endl;
+        if (x < (inImg.height()/2 + 10) && slope < 0)
+            continue;
         if(last_red_y2 == -1 ||
            last_red_x2 == 0  ||
            //the diffefenct of 2 slope must < 0.6 && itself must < 0.6
