@@ -828,11 +828,11 @@ void SimpleView::slotPreProcessMrf16()
     slotRunMrf();
 
     //merge and then see whick one has largest edges
-    int edge_pixel_count[15];
+    int edge_pixel_count[this->ui->leIterationNum->text().toInt()];
     float edge_count_th_low = ImgW * 6;
     float edge_count_th_hi = ImgW * 6 * 1.4;
     cout << "ImgW : "<<ImgW <<" edge count threshold low : "<<edge_count_th_low<<" edge count threshold high: "<<edge_count_th_hi<<endl;
-    for (int i = 3; i < 15; i++)
+    for (int i = 3; i < this->ui->leIterationNum->text().toInt()-1; i++)
     {
         MrfMerge(i);
         region_growing(FILE_MRF_MERGE, FILE_REGION_GROWING, ImgW/2, ImgH-10, 255);
@@ -840,20 +840,21 @@ void SimpleView::slotPreProcessMrf16()
         cout<<"merge:"<<i<<", edge_pixel_count:"<<edge_pixel_count[i]<<endl;
 //        if (edge_pixel_count > th_edge_count) break;
     }
-    for (int i = 3; i < 15; i++)
+    for (int i = 3; i < this->ui->leIterationNum->text().toInt()-1; i++)
     {
         if (edge_pixel_count[i] > edge_count_th_low)
         {
             cout << "i:"<<i;
-            for(int j = i+1; j < 15; j++)
+            for(int j = i+1; j < this->ui->leIterationNum->text().toInt()-1; j++)
             {
                 if (edge_pixel_count[j] > edge_count_th_hi)
                 {
                     cout << " j:"<<j;
-                    MrfMerge((i+j-1)/2);
+                    int merge_no = (i+j-1)/2;
+                    MrfMerge(merge_no);
                     region_growing(FILE_MRF_MERGE, FILE_REGION_GROWING, ImgW/2, ImgH-10, 255);
                     edge_pixel_count[i] = sobelFilter();
-                    cout<<" do merge:"<<(i+j-1)/2<<endl;
+                    cout<<" do merge:"<<merge_no<<endl;
                     break;
                 }
             }
@@ -869,7 +870,7 @@ void SimpleView::slotRunMrf()
     C_fileIO kmeanImage;
     C_fileIO mrfImage;
     C_itkSeg mySeg;
-    mySeg.setParameter(16/*this->ui->leIterationNum->text().toInt()*/);
+    mySeg.setParameter(this->ui->leIterationNum->text().toInt());
     kmeanImage.readFromOtherImage(mySeg.kmeanMethod2D( myImage2D.castsignedShort2D())) ;
     myImage2D.readFromOtherImage(  mySeg.markovMethod2D( myImage2D.castsignedShort2D(), kmeanImage.originalImages()  )  );
     myImage2D.writeImageToFile(FILE_MRF);
@@ -1014,7 +1015,7 @@ void SimpleView::MrfMerge(int classes)
     int ThresholdingValue;
 
 
-    ClassNumber = 16.0;
+    ClassNumber = this->ui->leIterationNum->text().toInt();
     SelectingClass = (float)(classes);
     ThresholdingValue = (int)(((255.0 / (ClassNumber - 1.0)) * (SelectingClass - 1.0)) + 2.0);
 //    cout << "ThresholdingValue is : " << ThresholdingValue << endl;
@@ -1032,7 +1033,7 @@ void SimpleView::MrfMerge(int classes)
 
 //    this->displayMyView(inImg, RegionGrowing);
     QString saved_file_name = FILE_MRF_MERGE;
-//    inImg.save(saved_file_name.remove(".bmp") + QString::number(classes) + ".bmp");
+    inImg.save(saved_file_name.remove(".bmp") + QString::number(classes) + ".bmp");
     inImg.save(FILE_MRF_MERGE);
 }
 
