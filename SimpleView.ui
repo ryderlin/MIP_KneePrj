@@ -431,8 +431,8 @@
    <widget class="QPushButton" name="btnPreProcessMrf">
     <property name="geometry">
      <rect>
-      <x>150</x>
-      <y>80</y>
+      <x>30</x>
+      <y>90</y>
       <width>101</width>
       <height>31</height>
      </rect>
@@ -853,6 +853,20 @@ MRF16</string>
     </property>
     <property name="text">
      <string>select</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnAutoCompare">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>90</y>
+      <width>101</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>auto
+compare</string>
     </property>
    </widget>
   </widget>

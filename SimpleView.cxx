@@ -486,6 +486,7 @@ SimpleView::SimpleView()
     connect(this->ui->btnDeFrangment, SIGNAL (released()),this, SLOT (slotDeFragment()));
     connect(this->ui->btnSmooth, SIGNAL (released()),this, SLOT (slotSmoothEdge()));
     connect(this->ui->btnOpenDocImg, SIGNAL (released()),this, SLOT (slotOpenDocImg()));
+    connect(this->ui->btnAutoCompare, SIGNAL (released()),this, SLOT (slotAutoCompare()));
 
     tblCmp = new QTableWidget(3, 3, this);
     tblCmp->setGeometry(20, 600, 1000, 150);
@@ -546,6 +547,34 @@ void SimpleView::slotSelectCmpResult()
     }
     QClipboard *clipboard = QApplication::clipboard();
     clipboard->setText(selected_text);
+}
+
+void SimpleView::slotAutoCompare()
+{
+    itk::BMPImageIOFactory::RegisterOneFactory();
+    QString auto_compare_path = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath());
+    QFileInfo fi(auto_compare_path);
+    QDirIterator it(fi.absolutePath(), QStringList() << "*.bmp", QDir::Files, QDirIterator::NoIteratorFlags);
+    qDebug() << "start auto compare "<<endl;
+    int count = 0;
+    while (it.hasNext()) {
+        count++;
+        InputFile = it.next();
+        qDebug() << InputFile;
+        QImage img(InputFile);
+        ImgW = img.width();
+        ImgH = img.height();
+        cout << "W x H : " << ImgW <<","<<ImgH<<endl;
+
+        ReaderType::Pointer reader = ReaderType::New();
+        reader->SetFileName(InputFile.toLatin1().data());
+        reader->Update();
+        myImage2D.readFromOtherOutput(reader->GetOutput());
+
+        slotPreProcessMrf16();
+        AutoOpenDocImage();
+    }
+    qDebug() << endl<<"count = "<<count;
 }
 
 // Action to be taken upon file open
@@ -768,6 +797,96 @@ void SimpleView::slotOpenDocImg()
     tblCmp->setItem(2,2,new QTableWidgetItem(s_diff));
 }
 
+void SimpleView::AutoOpenDocImage()
+{
+    QFileInfo fi(InputFile);
+    //load back the image that processed by doctor
+    QImage info_img(fi.absolutePath() + "/KneeOutput/" + fi.baseName().remove(".bmp") + "_out_load.bmp");
+    //clear previous record
+    DCenterX.clear(); DCenterY.clear(); DLeftX.clear(); DLeftY.clear(); DRightX.clear(); DRightY.clear();
+    for (int x = 0; x < info_img.width(); x++)
+    {
+        for (int y = 0; y < info_img.height(); y++)
+        {
+            //get center point
+            if(is5PixelDot(info_img, x, y, COLOR_CENTER_DOT_1))
+            {
+                qDebug() << "center point = (" << x+2 << "," << y+2 << ")" << endl;
+                DCenterX.push_back(x+2);
+                DCenterY.push_back(y+2);
+            }
+            //get left point
+            if(is5PixelDot(info_img, x, y, COLOR_LEFT_DOT_1))
+            {
+                qDebug() << "left point = (" << x+2 << "," << y+2 << ")" << endl;
+                DLeftX.push_back(x+2);
+                DLeftY.push_back(y+2);
+            }
+            //get right point
+            if(is5PixelDot_RightThickness(info_img, x, y, COLOR_RIGHT_DOT_1))
+            {
+                qDebug() << "right point = (" << x+2 << "," << y+2 << ")" << endl;
+                DRightX.push_back(x+2);
+                DRightY.push_back(y+2);
+            }
+        }
+    }
+    QFile statisticFile(FILE_STATISTIC);
+    statisticFile.open(QIODevice::Append | QIODevice::Text);
+    if(!statisticFile.isOpen()){
+        qDebug() << "- Error, unable to open" << FILE_STATISTIC << "for output";
+        return;
+    }
+    QTextStream outStream(&statisticFile);
+
+    //show information of doctor image
+    QString distance_info;
+    if(DCenterX.size() >= 2)
+    {
+        distance_info = getDistanceInfo(DCenterX[0], DCenterY[0], DCenterX[1], DCenterY[1], &DCenterThickness);
+        ui->lbDCenterThick->setText(distance_info);
+        tblCmp->setItem(1,0,new QTableWidgetItem(distance_info));
+        outStream << distance_info + ";";
+    }
+    if(DLeftX.size() >= 2)
+    {
+        distance_info = getDistanceInfo(DLeftX[0], DLeftY[0], DLeftX[1], DLeftY[1], &DLeftThickness);
+        ui->lbDLeftThick->setText(distance_info);
+        tblCmp->setItem(1,1,new QTableWidgetItem(distance_info));
+        outStream << distance_info + ";";
+    }
+    if(DRightX.size() >= 2)
+    {
+        distance_info = getDistanceInfo(DRightX[0], DRightY[0], DRightX[1], DRightY[1], &DRightThickness);
+        ui->lbDRightThick->setText(distance_info);
+        tblCmp->setItem(1,2,new QTableWidgetItem(distance_info));
+        outStream << distance_info <<endl;
+    }
+    //show compare information
+//    double difference = (DCenterThickness - CCenterThickness)/CCenterThickness;
+    double difference = abs(DCenterThickness - CCenterThickness);
+    QString s_diff = "%" + QString::number(difference*100);
+    ui->lbCmpCenter->setText(s_diff);
+    tblCmp->setItem(2,0,new QTableWidgetItem(s_diff));
+    outStream << QString::number(difference) + ";";
+
+//    difference = (DLeftThickness - CLeftThickness)/CLeftThickness;
+    difference = abs(DLeftThickness - CLeftThickness);
+    s_diff = "%" + QString::number(difference*100);
+    ui->lbCmpLeft->setText(s_diff);
+    tblCmp->setItem(2,1,new QTableWidgetItem(s_diff));
+    outStream << QString::number(difference) + ";";
+
+//    difference = (DRightThickness - CRightThickness)/CRightThickness;
+    difference = abs(DRightThickness - CRightThickness);
+    s_diff = "%" + QString::number(difference*100);
+    ui->lbCmpRight->setText(s_diff);
+    tblCmp->setItem(2,2,new QTableWidgetItem(s_diff));
+    outStream << QString::number(difference) <<endl;
+
+    statisticFile.close();
+}
+
 void SimpleView::showComputerSegImage(QImage img)
 {
     int w = ui->gbComputerSegImg->width(), h = ui->gbComputerSegImg->height();
@@ -830,7 +949,7 @@ void SimpleView::slotPreProcessMrf16()
     //merge and then see whick one has largest edges
     int edge_pixel_count[this->ui->leIterationNum->text().toInt()];
     float edge_count_th_low = ImgW * 6;
-    float edge_count_th_hi = ImgW * 6 * 1.3;
+    float edge_count_th_hi = ImgW * 6 * 1.4;
     cout << "ImgW : "<<ImgW <<" edge count threshold low : "<<edge_count_th_low<<" edge count threshold high: "<<edge_count_th_hi<<endl;
     for (int i = 2; i < this->ui->leIterationNum->text().toInt()-1; i++)
     {
@@ -1177,12 +1296,22 @@ void SimpleView::drawThickness()
     QString distance_info;
     pt.setPen(Qt::green);
 
+    QFile statisticFile(FILE_STATISTIC);
+    statisticFile.open(QIODevice::Append | QIODevice::Text);
+    if(!statisticFile.isOpen()){
+        qDebug() << "- Error, unable to open" << FILE_STATISTIC << "for output";
+        return;
+    }
+    QTextStream outStream(&statisticFile);
+    outStream << QFileInfo(InputFile).baseName() + "; ; " << endl;
+
     //draw center and distance info
     x1 = line1_center_x;    y1 = SplineY1[line1_center_x];
     x2 = lowestY_x2;        y2 = SplineY2[lowestY_x2];
     distance_info = getDistanceInfo(x2, &CCenterThickness);
     ui->lbCCenterThick->setText(distance_info);
     tblCmp->setItem(0,0,new QTableWidgetItem(distance_info));
+    outStream << distance_info + ";";
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 0, 500, 20),Qt::AlignLeft,distance_info);
@@ -1194,6 +1323,7 @@ void SimpleView::drawThickness()
     distance_info = getDistanceInfo(x2, &CLeftThickness);
     ui->lbCLeftThick->setText(distance_info);
     tblCmp->setItem(0,1,new QTableWidgetItem(distance_info));
+    outStream << distance_info + ";";
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 20, 300, 20),Qt::AlignLeft,distance_info);
@@ -1206,6 +1336,7 @@ void SimpleView::drawThickness()
     distance_info = getDistanceInfo(x2, &CRightThickness);
     ui->lbCRightThick->setText(distance_info);
     tblCmp->setItem(0,2,new QTableWidgetItem(distance_info));
+    outStream << distance_info <<endl;
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 40, 300, 30),Qt::AlignLeft,distance_info);
@@ -1215,6 +1346,7 @@ void SimpleView::drawThickness()
 //    displayMyView(img, CalculateDistance);
     showComputerSegImage(img);
     img.save(FILE_THICKNESS);
+    statisticFile.close();
 }
 
 void SimpleView::RemoveFragments()
@@ -1668,8 +1800,10 @@ void SimpleView::drawSpline3()
             if(qRed(rgb) >=255)
             {
                 y_cnt ++;
+#ifdef DEBUG_DRAW_THICKNESS
                 cout<<"############Line2\n";
                 cout<<"(x,y) = ("<<x<<","<<y<<")";
+#endif
                 //find the top point of line2
                 for (int i = y; i >=0; i--)
                 {
@@ -1680,15 +1814,19 @@ void SimpleView::drawSpline3()
                         every_white = false;
                         y_cnt ++;
                         if (y_cnt == 2) y2 = i; //remember the line2's Y cordinate
+#ifdef DEBUG_DRAW_THICKNESS
                         cout<<", (x,i) = ("<<x<<","<<i<<")";
                         cout<<", y_cnt = "<<y_cnt<<endl;
+#endif
                     }
                     else if (qRed(t_rgb) >=255 && !every_white)
                     {
                         //to remember the top y of the continous red y points
                         if (y_tmp == 0 || i == y_tmp - 1)
                             y_tmp = i;
+#ifdef DEBUG_DRAW_THICKNESS
                         cout<<", y_tmp = "<<y_tmp<<endl;
+#endif
                     }
                 }
                 if (y_cnt >= 3) //means total >= 3 lines, but I needs line2
@@ -1699,7 +1837,9 @@ void SimpleView::drawSpline3()
                 {
                     y_use = y_tmp;
                 }
+#ifdef DEBUG_DRAW_THICKNESS
                 cout<<", y_cnt = "<<y_cnt<<endl;
+#endif
                 sp_all_x2.push_back(x);
                 sp_all_y2.push_back(y_use);
                 break;
@@ -1708,13 +1848,17 @@ void SimpleView::drawSpline3()
     }
     //2.to check to dispose first point or not
     float slope_first_point = (sp_all_y1[1] - sp_all_y1[0])/(sp_all_x1[1] - sp_all_x1[0]);
+#ifdef DEBUG_DRAW_THICKNESS
     cout<<"point0 :"<<sp_all_x1[0]<<","<<sp_all_y1[0]<<endl;
     cout<<"point1 :"<<sp_all_x1[1]<<","<<sp_all_y1[1]<<endl;
     cout<<"slope_first_point :"<<slope_first_point<<endl;
+#endif
     //if first slope too large, delete the first point then interpolate it
     if (slope_first_point > 0.65)
     {
+#ifdef DEBUG_DRAW_THICKNESS
         cout<<"######after interpolate first point:"<<endl;
+#endif
         int interpolate_y = 0;
         for (int i = 1; i <=5; i++)
         {
@@ -1724,9 +1868,11 @@ void SimpleView::drawSpline3()
         interpolate_y = interpolate_y/5;
         sp_all_y1[0] = sp_all_y1[1] - interpolate_y;
         slope_first_point = (sp_all_y1[1] - sp_all_y1[0])/(sp_all_x1[1] - sp_all_x1[0]);
+#ifdef DEBUG_DRAW_THICKNESS
         cout<<"point0 :"<<sp_all_x1[0]<<","<<sp_all_y1[0]<<endl;
         cout<<"point1 :"<<sp_all_x1[1]<<","<<sp_all_y1[1]<<endl;
         cout<<"slope_first_point :"<<slope_first_point<<endl;
+#endif
     }
 
     //3.remove some unsuitable point of line1 & line2
@@ -1737,12 +1883,13 @@ void SimpleView::drawSpline3()
         slope = (float)(y-last_red_y1) / (float)(x-last_red_x1);
         //get first old_slope1
         if(last_red_x1 == 0) old_slope1 = slope;
+#ifdef DEBUG_DRAW_THICKNESS
         cout<<"############Line1\n";
         cout<<"(x,y) = ("<<x<<","<<y<<")";
         cout<<", (last_red_x1, last_red_y1) = ("<<last_red_x1<<","<<last_red_y1<<")";
         cout<<", slope = "<<slope;
         cout<<", old_slope1 = "<<old_slope1<<endl;
-
+#endif
         //the skip point condition
             //if slope is going up and before width/2, skip
         if (x < (inImg.height()/2 + 10) && slope < 0)
@@ -1757,7 +1904,9 @@ void SimpleView::drawSpline3()
            //y_use
            x > inImg.height()/5 && slope > 0*/)
         {
+#ifdef DEBUG_DRAW_THICKNESS
             cout<<"sample taken!!"<<endl;
+#endif
             sp_x1.push_back(x);
             sp_y1.push_back(y);
             drawColorDot(&sampleImg,qRgb(0,0,255), x, y);
@@ -1772,10 +1921,12 @@ void SimpleView::drawSpline3()
         /*****line2*****/
         int x = sp_all_x2[i], y = sp_all_y2[i];
         slope = (float)(y-last_red_y2) / (float)(x-last_red_x2);
+#ifdef DEBUG_DRAW_THICKNESS
         cout<<"(x,y) = ("<<x<<","<<y<<")";
         cout<<", (last_red_x2, last_red_y2) = ("<<last_red_x2<<","<<last_red_y2<<")";
         cout<<", slope = "<<slope;
         cout<<", old_slope2 = "<<old_slope2<<endl;
+#endif
         if (x < (inImg.height()/2 + 10) && slope < 0)
             continue;
         if(last_red_y2 == -1 ||
@@ -1785,7 +1936,9 @@ void SimpleView::drawSpline3()
            //slope begin to going up && can not going up too much (< 0.6)
            (slope < 0 && old_slope2 > 0) && fabs(slope) < 0.6)
         {
+#ifdef DEBUG_DRAW_THICKNESS
             cout<<"sample taken!!"<<endl;
+#endif
             sp_x2.push_back(x);
             sp_y2.push_back(y);
             drawColorDot(&sampleImg,qRgb(0,255,0), x, y);

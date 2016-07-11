@@ -35,6 +35,7 @@
 #define FILE_SMOOTH_EDGE            OUT_FILE_DIR"smooth_edge.bmp"
 #define FILE_MRF                    OUT_FILE_DIR"KneeOut_MRF.bmp"
 #define FILE_THICKNESS              OUT_FILE_DIR"KneeOut_Thickness.bmp"
+#define FILE_STATISTIC              OUT_FILE_DIR"statistic.csv"
 
 using namespace std;
 
@@ -94,6 +95,7 @@ public slots:
   virtual void slotDeFragment();
   virtual void slotSmoothEdge();
   virtual void slotSelectCmpResult();
+  virtual void slotAutoCompare();
   virtual void displayImage(vtkImageData *image);
   virtual void displayImage2(vtkImageData *image);
   virtual void displayMyView(QImage img, ViewMode view_mode);
@@ -126,6 +128,7 @@ private:
   void showDoctorSegImage(QImage img);
   bool is5PixelDot(QImage in_img, int x, int y, int color);
   bool is5PixelDot_RightThickness(QImage in_img, int x, int y, int color);
+  void AutoOpenDocImage();
 
   //vtkImageViewer2 *viewer;
 
