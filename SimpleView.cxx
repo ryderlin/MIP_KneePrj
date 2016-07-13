@@ -554,6 +554,32 @@ void SimpleView::slotAutoCompare()
     itk::BMPImageIOFactory::RegisterOneFactory();
     QString auto_compare_path = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath());
     QFileInfo fi(auto_compare_path);
+#if 1 //test
+    QDir dir(fi.absolutePath());
+    QStringList nameFilter;
+    nameFilter << "*.bmp";
+    QFileInfoList list = dir.entryInfoList(nameFilter, QDir::Files, QDir::Name);
+    int count = 0;
+    qDebug() << "start auto compare "<<endl;
+    foreach(QFileInfo finfo, list) {
+        count++;
+        InputFile = finfo.absoluteFilePath();
+        qDebug() << InputFile;
+        QImage img(InputFile);
+        ImgW = img.width();
+        ImgH = img.height();
+        cout << "W x H : " << ImgW <<","<<ImgH<<endl;
+
+        ReaderType::Pointer reader = ReaderType::New();
+        reader->SetFileName(InputFile.toLatin1().data());
+        reader->Update();
+        myImage2D.readFromOtherOutput(reader->GetOutput());
+
+        slotPreProcessMrf16();
+        AutoOpenDocImage();
+    }
+    qDebug() << endl<<"count = "<<count;
+#else
     QDirIterator it(fi.absolutePath(), QStringList() << "*.bmp", QDir::Files, QDirIterator::NoIteratorFlags);
     qDebug() << "start auto compare "<<endl;
     int count = 0;
@@ -575,6 +601,7 @@ void SimpleView::slotAutoCompare()
         AutoOpenDocImage();
     }
     qDebug() << endl<<"count = "<<count;
+#endif
 }
 
 // Action to be taken upon file open
@@ -1927,8 +1954,6 @@ void SimpleView::drawSpline3()
         cout<<", slope = "<<slope;
         cout<<", old_slope2 = "<<old_slope2<<endl;
 #endif
-        if (x < (inImg.height()/2 + 10) && slope < 0)
-            continue;
         if(last_red_y2 == -1 ||
            last_red_x2 == 0  ||
            //the diffefenct of 2 slope must < 0.6 && itself must < 0.6
