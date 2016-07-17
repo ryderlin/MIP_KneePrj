@@ -117,6 +117,7 @@ private:
   void drawSpline1();
   void drawSpline2();
   void drawSpline3();
+  void drawSpline4();
   void RemoveFragments();
   int getThicknessPoint(int line2_x);
   QString getDistanceInfo(int x1, int y1, int x2, int y2, double *dis);

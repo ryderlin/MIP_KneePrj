@@ -873,43 +873,45 @@ void SimpleView::AutoOpenDocImage()
         distance_info = getDistanceInfo(DCenterX[0], DCenterY[0], DCenterX[1], DCenterY[1], &DCenterThickness);
         ui->lbDCenterThick->setText(distance_info);
         tblCmp->setItem(1,0,new QTableWidgetItem(distance_info));
-        outStream << distance_info + ";";
+        outStream << distance_info.mid(distance_info.indexOf("=")+1) + ";";
     }
     if(DLeftX.size() >= 2)
     {
         distance_info = getDistanceInfo(DLeftX[0], DLeftY[0], DLeftX[1], DLeftY[1], &DLeftThickness);
         ui->lbDLeftThick->setText(distance_info);
         tblCmp->setItem(1,1,new QTableWidgetItem(distance_info));
-        outStream << distance_info + ";";
+        outStream << distance_info.mid(distance_info.indexOf("=")+1) + ";";
     }
     if(DRightX.size() >= 2)
     {
         distance_info = getDistanceInfo(DRightX[0], DRightY[0], DRightX[1], DRightY[1], &DRightThickness);
         ui->lbDRightThick->setText(distance_info);
         tblCmp->setItem(1,2,new QTableWidgetItem(distance_info));
-        outStream << distance_info <<endl;
+        outStream << distance_info.mid(distance_info.indexOf("=")+1) <<endl;
     }
     //show compare information
-//    double difference = (DCenterThickness - CCenterThickness)/CCenterThickness;
+    double diff = (DCenterThickness - CCenterThickness)/CCenterThickness;
+    QString s_diffC = "%" + QString::number(diff*100);
     double difference = abs(DCenterThickness - CCenterThickness);
-    QString s_diff = "%" + QString::number(difference*100);
-    ui->lbCmpCenter->setText(s_diff);
-    tblCmp->setItem(2,0,new QTableWidgetItem(s_diff));
+    ui->lbCmpCenter->setText(s_diffC);
+    tblCmp->setItem(2,0,new QTableWidgetItem(s_diffC));
     outStream << QString::number(difference) + ";";
 
-//    difference = (DLeftThickness - CLeftThickness)/CLeftThickness;
+    diff = (DLeftThickness - CLeftThickness)/CLeftThickness;
+    QString s_diffL = "%" + QString::number(diff*100);
     difference = abs(DLeftThickness - CLeftThickness);
-    s_diff = "%" + QString::number(difference*100);
-    ui->lbCmpLeft->setText(s_diff);
-    tblCmp->setItem(2,1,new QTableWidgetItem(s_diff));
+    ui->lbCmpLeft->setText(s_diffL);
+    tblCmp->setItem(2,1,new QTableWidgetItem(s_diffL));
     outStream << QString::number(difference) + ";";
 
-//    difference = (DRightThickness - CRightThickness)/CRightThickness;
+    diff = (DRightThickness - CRightThickness)/CRightThickness;
+    QString s_diffR = "%" + QString::number(diff*100);
     difference = abs(DRightThickness - CRightThickness);
-    s_diff = "%" + QString::number(difference*100);
-    ui->lbCmpRight->setText(s_diff);
-    tblCmp->setItem(2,2,new QTableWidgetItem(s_diff));
+    ui->lbCmpRight->setText(s_diffR);
+    tblCmp->setItem(2,2,new QTableWidgetItem(s_diffR));
     outStream << QString::number(difference) <<endl;
+
+    outStream << s_diffC + ";" << s_diffL + ";" << s_diffR + ";" << endl;
 
     statisticFile.close();
 }
@@ -1338,7 +1340,7 @@ void SimpleView::drawThickness()
     distance_info = getDistanceInfo(x2, &CCenterThickness);
     ui->lbCCenterThick->setText(distance_info);
     tblCmp->setItem(0,0,new QTableWidgetItem(distance_info));
-    outStream << distance_info + ";";
+    outStream << distance_info.mid(distance_info.indexOf("=")+1) + ";";
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 0, 500, 20),Qt::AlignLeft,distance_info);
@@ -1350,7 +1352,7 @@ void SimpleView::drawThickness()
     distance_info = getDistanceInfo(x2, &CLeftThickness);
     ui->lbCLeftThick->setText(distance_info);
     tblCmp->setItem(0,1,new QTableWidgetItem(distance_info));
-    outStream << distance_info + ";";
+    outStream << distance_info.mid(distance_info.indexOf("=")+1) + ";";
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 20, 300, 20),Qt::AlignLeft,distance_info);
@@ -1363,7 +1365,7 @@ void SimpleView::drawThickness()
     distance_info = getDistanceInfo(x2, &CRightThickness);
     ui->lbCRightThick->setText(distance_info);
     tblCmp->setItem(0,2,new QTableWidgetItem(distance_info));
-    outStream << distance_info <<endl;
+    outStream << distance_info.mid(distance_info.indexOf("=")+1) <<endl;
     pt.drawLine(x1,y1, x2,y2);
     pt.setPen(Qt::yellow);
     pt.drawText(QRect(0, 40, 300, 30),Qt::AlignLeft,distance_info);
@@ -1924,12 +1926,11 @@ void SimpleView::drawSpline3()
 
         if(last_red_y1 == -1 || //must sample first point
 //                   last_red_x1 == 0  || //must sample second point, let the old_slope1 be correct
+            //slope begin to going up && can not going up too much (< 0.6)
+            (slope < 0 && old_slope1 > 0) && fabs(slope) < 0.55 ||
            //the diffefenct of 2 slope must < 0.6 && itself must < 0.6
-           fabs(slope-old_slope1) < 0.6 && fabs(slope) < 0.65 ||
-           //slope begin to going up && can not going up too much (< 0.6)
-           (slope < 0 && old_slope1 > 0) && fabs(slope) < 0.55 /*||
-           //y_use
-           x > inImg.height()/5 && slope > 0*/)
+           fabs(slope-old_slope1) < 0.6 && fabs(slope) < 0.65
+                )
         {
 #ifdef DEBUG_DRAW_THICKNESS
             cout<<"sample taken!!"<<endl;
@@ -1954,12 +1955,237 @@ void SimpleView::drawSpline3()
         cout<<", slope = "<<slope;
         cout<<", old_slope2 = "<<old_slope2<<endl;
 #endif
+        //if slope is going up and before width/2, skip
+        if (x < (inImg.height()/2 + 10) && slope < 0)
+            continue;
         if(last_red_y2 == -1 ||
            last_red_x2 == 0  ||
+            //slope begin to going up && can not going up too much (< 0.6)
+            (slope < 0 && old_slope2 > 0) && fabs(slope) < 0.6 ||
            //the diffefenct of 2 slope must < 0.6 && itself must < 0.6
-           fabs(slope-old_slope2) < 0.6  && fabs(slope) < 0.65 ||
-           //slope begin to going up && can not going up too much (< 0.6)
-           (slope < 0 && old_slope2 > 0) && fabs(slope) < 0.6)
+           fabs(slope-old_slope2) < 0.6  && fabs(slope) < 0.65
+                )
+        {
+#ifdef DEBUG_DRAW_THICKNESS
+            cout<<"sample taken!!"<<endl;
+#endif
+            sp_x2.push_back(x);
+            sp_y2.push_back(y);
+            drawColorDot(&sampleImg,qRgb(0,255,0), x, y);
+            last_red_x2 = x;
+            last_red_y2 = y;
+            old_slope2 = slope;
+        }
+    }
+
+    s1.set_points(sp_x1,sp_y1);
+    s2.set_points(sp_x2,sp_y2);
+    memset(SplineY1, 0, sizeof(SplineY1));
+    memset(SplineY2, 0, sizeof(SplineY2));
+    lowestY_x1 = lowestY_x2 = 0;
+    int max_y1 = 0, max_y2 = 0;
+    for (int col = 0; col<outImgC.width(); col++)
+    {
+        outImgC.setPixel(col, (int)s1((double)col), qRgb(255, 0, 0));
+        outImgC.setPixel(col, (int)s2((double)col), qRgb(255, 0, 0));
+        drawColorDot(&inImg, qRgb(0,0,255), col, (int)s1((double)col));
+        drawColorDot(&inImg, qRgb(0,255,0), col, (int)s2((double)col));
+        //recording the 2 spline cordinates, and lowestY_x1, lowestY_x2
+        SplineY1[col] = (int)s1((double)col);
+        SplineY2[col] = (int)s2((double)col);
+        if (SplineY1[col] > max_y1)
+        {
+            max_y1 = SplineY1[col];
+            lowestY_x1 = col;
+        }
+        if (SplineY2[col] > max_y2)
+        {
+            max_y2 = SplineY2[col];
+            lowestY_x2 = col;
+        }
+    }
+    sampleImg.save(FILE_SPLINE_SAMPLE);
+    //draw lowest point
+    drawColorDot(&outImgC, qRgb(0,0,255),lowestY_x1, SplineY1[lowestY_x1]);
+    drawColorDot(&outImgC, qRgb(0,255,0),lowestY_x2, SplineY2[lowestY_x2]);
+//    this->displayMyView(outImgC, None);
+    outImgC.save(FILE_SPLINE);
+}
+
+//clone from drawSpline3, add reverse check
+void SimpleView::drawSpline4()
+{
+    QImage inImg = QImage(FILE_SOBEL_RED);
+    QImage sampleImg = QImage(FILE_SOBEL_RED);
+    QImage outImg = QImage(InputFile.toLatin1().data());
+    QImage outImgC = outImg.convertToFormat(QImage::Format_RGB888);
+    std::vector<double> sp_x1, sp_y1, sp_x2, sp_y2;
+    std::vector<double> sp_all_x1, sp_all_y1, sp_all_x2, sp_all_y2;
+    tk::spline s1, s2;
+    int last_red_y1 = -1, last_red_x1 = -1;
+    int last_red_y2 = -1, last_red_x2 = -1;
+    float slope = 0.0, old_slope1 = 0.0, old_slope2 = 0.0;
+    //1.get the all sample point first
+    for(int x = 0; x < inImg.width(); x += this->ui->leSplineW->text().toInt())
+    {
+        //line1
+        for(int y = 0; y < inImg.height(); y++)
+        {
+            QRgb rgb = inImg.pixel(x, y);
+            if(qRed(rgb) >=255)
+            {
+                sp_all_x1.push_back(x);
+                sp_all_y1.push_back(y);
+                break;
+            }
+        }
+
+        //line2
+        //find top line of the bottom edge
+        int y2 = 0, y_use = 0, y_cnt = 0, y_tmp = 0;
+        bool every_white = false;
+        for(int y = inImg.height()-1; y >= 0; y--)
+        {
+            QRgb rgb = inImg.pixel(x, y);
+            if(qRed(rgb) >=255)
+            {
+                y_cnt ++;
+#ifdef DEBUG_DRAW_THICKNESS
+                cout<<"############Line2\n";
+                cout<<"(x,y) = ("<<x<<","<<y<<")";
+#endif
+                //find the top point of line2
+                for (int i = y; i >=0; i--)
+                {
+                    QRgb t_rgb = inImg.pixel(x, i);
+                    if (qGreen(t_rgb) > 0) every_white = true;
+                    if(qRed(t_rgb) >=255 && every_white)
+                    {
+                        every_white = false;
+                        y_cnt ++;
+                        if (y_cnt == 2) y2 = i; //remember the line2's Y cordinate
+#ifdef DEBUG_DRAW_THICKNESS
+                        cout<<", (x,i) = ("<<x<<","<<i<<")";
+                        cout<<", y_cnt = "<<y_cnt<<endl;
+#endif
+                    }
+                    else if (qRed(t_rgb) >=255 && !every_white)
+                    {
+                        //to remember the top y of the continous red y points
+                        if (y_tmp == 0 || i == y_tmp - 1)
+                            y_tmp = i;
+#ifdef DEBUG_DRAW_THICKNESS
+                        cout<<", y_tmp = "<<y_tmp<<endl;
+#endif
+                    }
+                }
+                if (y_cnt >= 3) //means total >= 3 lines, but I needs line2
+                {
+                    y_use = y2;
+                }
+                else if (y_cnt == 2) //means total has 2 lines, but I needs line1
+                {
+                    y_use = y_tmp;
+                }
+#ifdef DEBUG_DRAW_THICKNESS
+                cout<<", y_cnt = "<<y_cnt<<endl;
+#endif
+                sp_all_x2.push_back(x);
+                sp_all_y2.push_back(y_use);
+                break;
+            }
+        }
+    }
+    //2.to check to dispose first point or not
+    float slope_first_point = (sp_all_y1[1] - sp_all_y1[0])/(sp_all_x1[1] - sp_all_x1[0]);
+#ifdef DEBUG_DRAW_THICKNESS
+    cout<<"point0 :"<<sp_all_x1[0]<<","<<sp_all_y1[0]<<endl;
+    cout<<"point1 :"<<sp_all_x1[1]<<","<<sp_all_y1[1]<<endl;
+    cout<<"slope_first_point :"<<slope_first_point<<endl;
+#endif
+    //if first slope too large, delete the first point then interpolate it
+    if (slope_first_point > 0.65)
+    {
+#ifdef DEBUG_DRAW_THICKNESS
+        cout<<"######after interpolate first point:"<<endl;
+#endif
+        int interpolate_y = 0;
+        for (int i = 1; i <=5; i++)
+        {
+            interpolate_y += sp_all_y1[i+1] - sp_all_y1[i];
+        }
+        //average
+        interpolate_y = interpolate_y/5;
+        sp_all_y1[0] = sp_all_y1[1] - interpolate_y;
+        slope_first_point = (sp_all_y1[1] - sp_all_y1[0])/(sp_all_x1[1] - sp_all_x1[0]);
+#ifdef DEBUG_DRAW_THICKNESS
+        cout<<"point0 :"<<sp_all_x1[0]<<","<<sp_all_y1[0]<<endl;
+        cout<<"point1 :"<<sp_all_x1[1]<<","<<sp_all_y1[1]<<endl;
+        cout<<"slope_first_point :"<<slope_first_point<<endl;
+#endif
+    }
+
+    //3.remove some unsuitable point of line1 & line2
+    for (int i = 0; i < sp_all_x1.size(); i++)
+    {
+        /*****line1*****/
+        int x = sp_all_x1[i], y = sp_all_y1[i];
+        slope = (float)(y-last_red_y1) / (float)(x-last_red_x1);
+        //get first old_slope1
+        if(last_red_x1 == 0) old_slope1 = slope;
+#ifdef DEBUG_DRAW_THICKNESS
+        cout<<"############Line1\n";
+        cout<<"(x,y) = ("<<x<<","<<y<<")";
+        cout<<", (last_red_x1, last_red_y1) = ("<<last_red_x1<<","<<last_red_y1<<")";
+        cout<<", slope = "<<slope;
+        cout<<", old_slope1 = "<<old_slope1<<endl;
+#endif
+        //the skip point condition
+            //if slope is going up and before width/2, skip
+        if (x < (inImg.height()/2 + 10) && slope < 0)
+            continue;
+
+        if(last_red_y1 == -1 || //must sample first point
+//                   last_red_x1 == 0  || //must sample second point, let the old_slope1 be correct
+            //slope begin to going up && can not going up too much (< 0.6)
+            (slope < 0 && old_slope1 > 0) && fabs(slope) < 0.55 ||
+           //the diffefenct of 2 slope must < 0.6 && itself must < 0.6
+           fabs(slope-old_slope1) < 0.6 && fabs(slope) < 0.65
+                )
+        {
+#ifdef DEBUG_DRAW_THICKNESS
+            cout<<"sample taken!!"<<endl;
+#endif
+            sp_x1.push_back(x);
+            sp_y1.push_back(y);
+            drawColorDot(&sampleImg,qRgb(0,0,255), x, y);
+            last_red_x1 = x;
+            last_red_y1 = y;
+            old_slope1 = slope;
+        }
+    }
+
+    for (int i = 0; i < sp_all_x2.size(); i++)
+    {
+        /*****line2*****/
+        int x = sp_all_x2[i], y = sp_all_y2[i];
+        slope = (float)(y-last_red_y2) / (float)(x-last_red_x2);
+#ifdef DEBUG_DRAW_THICKNESS
+        cout<<"(x,y) = ("<<x<<","<<y<<")";
+        cout<<", (last_red_x2, last_red_y2) = ("<<last_red_x2<<","<<last_red_y2<<")";
+        cout<<", slope = "<<slope;
+        cout<<", old_slope2 = "<<old_slope2<<endl;
+#endif
+        //if slope is going up and before width/2, skip
+        if (x < (inImg.height()/2 + 10) && slope < 0)
+            continue;
+        if(last_red_y2 == -1 ||
+           last_red_x2 == 0  ||
+            //slope begin to going up && can not going up too much (< 0.6)
+            (slope < 0 && old_slope2 > 0) && fabs(slope) < 0.6 ||
+           //the diffefenct of 2 slope must < 0.6 && itself must < 0.6
+           fabs(slope-old_slope2) < 0.6  && fabs(slope) < 0.65
+                )
         {
 #ifdef DEBUG_DRAW_THICKNESS
             cout<<"sample taken!!"<<endl;
