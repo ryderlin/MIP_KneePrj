@@ -890,21 +890,24 @@ void SimpleView::AutoOpenDocImage()
         outStream << distance_info.mid(distance_info.indexOf("=")+1) <<endl;
     }
     //show compare information
-    double diff = (DCenterThickness - CCenterThickness)/CCenterThickness;
+    double denominator = DCenterThickness > CCenterThickness ? DCenterThickness : CCenterThickness;
+    double diff = abs(DCenterThickness - CCenterThickness)/denominator;
     QString s_diffC = "%" + QString::number(diff*100);
     double difference = abs(DCenterThickness - CCenterThickness);
     ui->lbCmpCenter->setText(s_diffC);
     tblCmp->setItem(2,0,new QTableWidgetItem(s_diffC));
     outStream << QString::number(difference) + ";";
 
-    diff = (DLeftThickness - CLeftThickness)/CLeftThickness;
+    denominator = DLeftThickness > CLeftThickness ? DLeftThickness : CLeftThickness;
+    diff = abs(DLeftThickness - CLeftThickness)/denominator;
     QString s_diffL = "%" + QString::number(diff*100);
     difference = abs(DLeftThickness - CLeftThickness);
     ui->lbCmpLeft->setText(s_diffL);
     tblCmp->setItem(2,1,new QTableWidgetItem(s_diffL));
     outStream << QString::number(difference) + ";";
 
-    diff = (DRightThickness - CRightThickness)/CRightThickness;
+    denominator = DRightThickness > CRightThickness ? DRightThickness : CRightThickness;
+    diff = abs(DRightThickness - CRightThickness)/CRightThickness;
     QString s_diffR = "%" + QString::number(diff*100);
     difference = abs(DRightThickness - CRightThickness);
     ui->lbCmpRight->setText(s_diffR);
