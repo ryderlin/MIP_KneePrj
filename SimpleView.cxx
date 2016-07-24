@@ -845,6 +845,50 @@ void SimpleView::slotOpenDocImg()
     tblCmp->setItem(2,2,new QTableWidgetItem(s_diffR));
 }
 
+double SimpleView::calculateDifferenceOfPosition(Position position)
+{
+    double distance = 0.0;
+    switch(position)
+    {
+    case CENTER :
+//        cout << __func__<<"doc center(x0,y0) = (" << DCenterX[0] << "," << DCenterY[0] << "); " ;
+//        cout << __func__<<"doc center(x1,y1) = (" << DCenterX[1] << "," << DCenterY[1] << "); " ;
+//        cout << __func__<<"cpu center(x0,y0) = (" << CCenterX[0] << "," << CCenterY[0] << "); " ;
+//        cout << __func__<<"cpu center(x1,y1) = (" << CCenterX[1] << "," << CCenterY[1] << "); " ;
+
+        if (DCenterY[1] > DCenterY[0])
+        {
+            getDistanceInfo(DCenterX[1], DCenterY[1], CCenterX[0], CCenterY[0], &distance);
+        }
+        else
+        {
+            getDistanceInfo(DCenterX[0], DCenterY[0], CCenterX[0], CCenterY[0], &distance);
+        }
+        break;
+    case LEFT :
+        if (DLeftY[1] > DLeftY[0])
+        {
+            getDistanceInfo(DLeftX[1], DLeftY[1], CLeftX[0], CLeftY[0], &distance);
+        }
+        else
+        {
+            getDistanceInfo(DLeftX[0], DLeftY[0], CLeftX[0], CLeftY[0], &distance);
+        }
+        break;
+    case RIGHT :
+        if (DRightY[1] > DRightY[0])
+        {
+            getDistanceInfo(DRightX[1], DRightY[1], CRightX[0], CRightY[0], &distance);
+        }
+        else
+        {
+            getDistanceInfo(DRightX[0], DRightY[0], CRightX[0], CRightY[0], &distance);
+        }
+        break;
+    }
+    return distance;
+}
+
 void SimpleView::AutoOpenDocImage()
 {
     QFileInfo fi(InputFile);
@@ -928,7 +972,7 @@ void SimpleView::AutoOpenDocImage()
     outStream << QString::number(difference) + ";";
 
     denominator = DRightThickness > CRightThickness ? DRightThickness : CRightThickness;
-    diff = abs(DRightThickness - CRightThickness)/CRightThickness;
+    diff = abs(DRightThickness - CRightThickness)/denominator;
     QString s_diffR = "%" + QString::number(diff*100);
     difference = abs(DRightThickness - CRightThickness);
     ui->lbCmpRight->setText(s_diffR);
@@ -936,6 +980,10 @@ void SimpleView::AutoOpenDocImage()
     outStream << QString::number(difference) <<endl;
 
     outStream << s_diffC + ";" << s_diffL + ";" << s_diffR + ";" << endl;
+
+    outStream << QString::number(calculateDifferenceOfPosition(CENTER)) + ";"
+              << QString::number(calculateDifferenceOfPosition(LEFT)) + ";"
+              << QString::number(calculateDifferenceOfPosition(RIGHT)) + ";" << endl;
 
     statisticFile.close();
 }
@@ -1355,45 +1403,49 @@ void SimpleView::drawThickness()
         qDebug() << "- Error, unable to open" << FILE_STATISTIC << "for output";
         return;
     }
+    CCenterX.clear();CCenterY.clear();CLeftX.clear();CLeftY.clear();CRightX.clear();CRightY.clear();
     QTextStream outStream(&statisticFile);
     outStream << QFileInfo(InputFile).baseName() + "; ; " << endl;
 
     //draw center and distance info
     x1 = line1_center_x;    y1 = SplineY1[line1_center_x];
     x2 = lowestY_x2;        y2 = SplineY2[lowestY_x2];
+    CCenterX.push_back(x2);CCenterY.push_back(y2);
     distance_info = getDistanceInfo(x2, &CCenterThickness);
     ui->lbCCenterThick->setText(distance_info);
     tblCmp->setItem(0,0,new QTableWidgetItem(distance_info));
     outStream << distance_info.mid(distance_info.indexOf("=")+1) + ";";
     pt.drawLine(x1,y1, x2,y2);
-    pt.setPen(Qt::yellow);
-    pt.drawText(QRect(0, 0, 500, 20),Qt::AlignLeft,distance_info);
-    pt.setPen(Qt::green);
+//    pt.setPen(Qt::yellow);
+//    pt.drawText(QRect(0, 0, 500, 20),Qt::AlignLeft,distance_info);
+//    pt.setPen(Qt::green);
 
     //draw left and distance info
     x1 = line1_left_x;      y1 = SplineY1[line1_left_x];
     x2 = line2_left_x;      y2 = SplineY2[line2_left_x];
     distance_info = getDistanceInfo(x2, &CLeftThickness);
+    CLeftX.push_back(x2);CLeftY.push_back(y2);
     ui->lbCLeftThick->setText(distance_info);
     tblCmp->setItem(0,1,new QTableWidgetItem(distance_info));
     outStream << distance_info.mid(distance_info.indexOf("=")+1) + ";";
     pt.drawLine(x1,y1, x2,y2);
-    pt.setPen(Qt::yellow);
-    pt.drawText(QRect(0, 20, 300, 20),Qt::AlignLeft,distance_info);
-    pt.setPen(Qt::green);
+//    pt.setPen(Qt::yellow);
+//    pt.drawText(QRect(0, 20, 300, 20),Qt::AlignLeft,distance_info);
+//    pt.setPen(Qt::green);
 
     //draw right and distance info
     pt.drawLine(line1_right_x,SplineY1[line1_right_x], line2_right_x,SplineY2[line2_right_x]);
     x1 = line1_right_x;      y1 = SplineY1[line1_right_x];
     x2 = line2_right_x;      y2 = SplineY2[line2_right_x];
+    CRightX.push_back(x2);CRightY.push_back(y2);
     distance_info = getDistanceInfo(x2, &CRightThickness);
     ui->lbCRightThick->setText(distance_info);
     tblCmp->setItem(0,2,new QTableWidgetItem(distance_info));
     outStream << distance_info.mid(distance_info.indexOf("=")+1) <<endl;
     pt.drawLine(x1,y1, x2,y2);
-    pt.setPen(Qt::yellow);
-    pt.drawText(QRect(0, 40, 300, 30),Qt::AlignLeft,distance_info);
-    pt.setPen(Qt::green);
+//    pt.setPen(Qt::yellow);
+//    pt.drawText(QRect(0, 40, 300, 30),Qt::AlignLeft,distance_info);
+//    pt.setPen(Qt::green);
 
     pt.end();
 //    displayMyView(img, CalculateDistance);

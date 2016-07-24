@@ -59,6 +59,14 @@ typedef enum
     RegionGrowing
 }ViewMode;
 
+/*for compare the position between the doctor and computer*/
+typedef enum
+{
+    CENTER,
+    LEFT,
+    RIGHT
+}Position;
+
 // Forward Qt class declarations
 class Ui_SimpleView;
 
@@ -130,6 +138,7 @@ private:
   bool is5PixelDot(QImage in_img, int x, int y, int color);
   bool is5PixelDot_RightThickness(QImage in_img, int x, int y, int color);
   void AutoOpenDocImage();
+  double calculateDifferenceOfPosition(Position position);
 
   //vtkImageViewer2 *viewer;
 
